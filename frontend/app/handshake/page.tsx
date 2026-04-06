@@ -80,8 +80,8 @@ export default function HandshakePage() {
   const handleDeauth = async () => {
     if (!bssid || !iface) return
     try {
-      await sendDeauth(bssid, iface, undefined, 5)
-      setLines(prev => [...prev, `[*] Enviando 5 paquetes deauth a ${bssid}... (espera reconexión)`])
+      await sendDeauth(bssid, iface, undefined, 1)
+      setLines(prev => [...prev, `[*] Enviando 1 paquete deauth a ${bssid}... (espera reconexión)`])
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : String(e))
     }
