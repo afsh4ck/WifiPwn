@@ -66,7 +66,7 @@ export default function CrackingPage() {
   }
 
   return (
-    <div className="max-w-5xl space-y-6">
+    <div className="space-y-6">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Config */}
         <div className="card space-y-4">

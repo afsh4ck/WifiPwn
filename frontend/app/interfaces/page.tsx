@@ -41,7 +41,7 @@ export default function InterfacesPage() {
   }
 
   return (
-    <div className="max-w-4xl space-y-6">
+    <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold text-text">Interfaces de red inalámbricas</h2>
         <div className="flex gap-2">

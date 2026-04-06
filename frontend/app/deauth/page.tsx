@@ -60,7 +60,7 @@ export default function DeauthPage() {
   }
 
   return (
-    <div className="max-w-4xl space-y-6">
+    <div className="space-y-6">
       <div className="card border-danger/20 space-y-4">
         <p className="section-title flex items-center gap-2 text-danger">
           <Skull className="w-3.5 h-3.5" /> Ataque Deauthentication (802.11)

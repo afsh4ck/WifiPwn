@@ -42,7 +42,7 @@ export default function DashboardPage() {
   const allLogs = [...histLogs, ...logs].slice(-60).reverse()
 
   return (
-    <div className="space-y-6 max-w-7xl">
+    <div className="space-y-6">
       {/* Hero */}
       <div className="relative overflow-hidden rounded-2xl border border-accent/20 bg-surface p-6">
         <div className="absolute inset-0 bg-gradient-radial from-accent/5 to-transparent" />

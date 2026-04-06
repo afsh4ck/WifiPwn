@@ -70,7 +70,7 @@ export default function HandshakePage() {
   }
 
   return (
-    <div className="max-w-5xl space-y-6">
+    <div className="space-y-6">
       {/* Config */}
       <div className="card space-y-4">
         <p className="section-title">Configuración de captura</p>

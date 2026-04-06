@@ -61,7 +61,7 @@ export default function ScannerPage() {
   }
 
   return (
-    <div className="space-y-6 max-w-6xl">
+    <div className="space-y-6">
       {/* Controls */}
       <div className="card flex flex-wrap gap-4 items-end">
         <div className="flex-1 min-w-[200px]">
