@@ -231,7 +231,7 @@ class DatabaseManager:
 
     def get_network_by_bssid(self, bssid: str) -> Optional[Dict]:
         with self.cursor() as cur:
-            cur.execute("SELECT * FROM networks WHERE bssid=?", (bssid,))
+            cur.execute("SELECT * FROM networks WHERE bssid=? COLLATE NOCASE", (bssid,))
             r = cur.fetchone()
             return dict(r) if r else None
 

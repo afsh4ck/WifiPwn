@@ -30,6 +30,13 @@ export default function CrackingPage() {
     getHandshakes().then(setHandshakes).catch(console.error)
   }, [])
 
+  // Refresh handshake list when a new one is captured
+  useEffect(() => {
+    return subscribe('handshake_detected', () => {
+      getHandshakes().then(setHandshakes).catch(console.error)
+    })
+  }, [subscribe])
+
   // Stream command output
   useEffect(() => {
     return subscribe('command_output', (msg) => {

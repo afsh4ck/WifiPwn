@@ -60,13 +60,16 @@ async def start_capture(req: CaptureRequest):
         out = str(config.get_capture_path(f"{name}_{ts}"))
 
     def on_hs(bssid: str):
-        # Emit WebSocket event immediately
-        handshake_detected_sync(bssid)
+        # NOTE: global callback in main.py already broadcasts handshake_detected_sync,
+        # so we do NOT call it again here to avoid duplicate WS messages.
         # Persist to DB — find actual .cap file
         cap = wifi_manager._find_cap_file(out) or (out + "-01.cap")
         net = db.get_network_by_bssid(bssid)
-        if net:
-            db.add_handshake(net["id"], cap)
+        if not net:
+            # Network may not be in DB yet (manual BSSID entry, etc.) — create it
+            nid = db.upsert_network(bssid)
+            net = {"id": nid}
+        db.add_handshake(net["id"], cap)
         db.log_action("Handshake capturado", f"BSSID: {bssid} → {cap}")
     ok = wifi_manager.start_capture(req.bssid, req.channel, out, iface, on_hs)
     if not ok:
