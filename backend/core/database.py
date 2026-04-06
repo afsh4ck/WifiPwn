@@ -225,7 +225,7 @@ class DatabaseManager:
                        SUM(CASE WHEN h.cracked=1 THEN 1 ELSE 0 END) as cracked_count
                 FROM networks n
                 LEFT JOIN handshakes h ON n.id=h.network_id
-                GROUP BY n.id ORDER BY n.last_seen DESC
+                GROUP BY n.id ORDER BY n.power DESC, n.last_seen DESC
             """)
             return [dict(r) for r in cur.fetchall()]
 

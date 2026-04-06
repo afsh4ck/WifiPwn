@@ -42,9 +42,13 @@ export function WifiProvider({ children }: { children: ReactNode }) {
   const [networks, setNetworksRaw] = useState<Network[]>(() => load<Network[]>(LS_NETS, []))
   const [target,   setTargetRaw]   = useState<Network | null>(() => load<Network | null>(LS_TARGET, null))
 
+  const sortByPower = (nets: Network[]) =>
+    [...nets].sort((a, b) => (Number(b.power) || -100) - (Number(a.power) || -100))
+
   const setNetworks = useCallback((nets: Network[]) => {
-    setNetworksRaw(nets)
-    save(LS_NETS, nets)
+    const sorted = sortByPower(nets)
+    setNetworksRaw(sorted)
+    save(LS_NETS, sorted)
   }, [])
 
   // Merge: update existing entries by BSSID, add new ones, keep stale ones
@@ -52,7 +56,7 @@ export function WifiProvider({ children }: { children: ReactNode }) {
     setNetworksRaw(prev => {
       const map = new Map(prev.map(n => [n.bssid, n]))
       for (const n of incoming) map.set(n.bssid, n)
-      const merged = Array.from(map.values())
+      const merged = [...map.values()].sort((a, b) => (Number(b.power) || -100) - (Number(a.power) || -100))
       save(LS_NETS, merged)
       return merged
     })
