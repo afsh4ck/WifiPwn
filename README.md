@@ -128,24 +128,16 @@ npm run dev      # desarrollo con hot-reload
 ### Despliegue con Docker
 
 ```bash
-chmod +x run.sh
-./run.sh run
+# Iniciar (construye la imagen si es necesario)
+sudo bash deploy.sh docker
 
 # Comandos disponibles
-./run.sh build      # Construir imagen
-./run.sh run        # Ejecutar
-./run.sh stop       # Detener
-./run.sh shell      # Shell en el contenedor
-./run.sh logs       # Ver logs
-./run.sh clean      # Limpiar contenedor e imagen
-```
-
-O con Docker Compose:
-
-```bash
-docker-compose up -d --build
-docker-compose logs -f
-docker-compose down
+sudo bash deploy.sh docker build   # Construir imagen
+sudo bash deploy.sh docker stop    # Detener
+sudo bash deploy.sh docker logs    # Ver logs en tiempo real
+sudo bash deploy.sh docker status  # Estado del contenedor
+sudo bash deploy.sh docker shell   # Shell en el contenedor
+sudo bash deploy.sh docker clean   # Limpiar contenedor e imagen
 ```
 
 ---

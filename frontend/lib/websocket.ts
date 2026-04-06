@@ -116,7 +116,7 @@ export function useCommandOutput(cmdId: string | null) {
     if (!cmdId) return
     setLines([])
     return subscribe('command_output', (msg) => {
-      const d = msg.data as CommandOutputData
+      const d = msg.data as unknown as CommandOutputData
       if (d.cmd_id === cmdId) {
         setLines(prev => [...prev, d.line])
       }
