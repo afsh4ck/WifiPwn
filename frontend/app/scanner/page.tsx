@@ -208,12 +208,25 @@ export default function ScannerPage() {
         </div>
       )}
 
-      {/* Terminal table */}
-      <NetworkTable
-        networks={networks}
-        onSelect={setChosenNet}
-        selectedBssid={chosenNet?.bssid}
-      />
+      {/* Network table */}
+      <div className="card p-0 overflow-hidden">
+        <div className="flex items-center justify-between px-5 py-3 border-b border-border/60">
+          <p className="section-title mb-0 text-sm">
+            Redes detectadas
+            {networks.length > 0 && (
+              <span className="ml-2 text-accent font-normal normal-case">{networks.length}</span>
+            )}
+          </p>
+          {scanning && (
+            <span className="text-xs text-muted animate-pulse">actualizando cada 2s…</span>
+          )}
+        </div>
+        <NetworkTable
+          networks={networks}
+          onSelect={setChosenNet}
+          selectedBssid={chosenNet?.bssid}
+        />
+      </div>
     </div>
   )
 }

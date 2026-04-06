@@ -152,34 +152,87 @@ class WiFiManager:
 
         tmp = Path("/tmp/wifipwn_scan")
         tmp.mkdir(exist_ok=True)
+
+        # Remove ALL old CSV files so airodump-ng always writes to scan-01.csv
+        for stale in tmp.glob("scan*.csv"):
+            try:
+                stale.unlink()
+            except Exception:
+                pass
+
         prefix = str(tmp / "scan")
+        csv_file = prefix + "-01.csv"
 
         try:
             self._scan_process = subprocess.Popen(
                 ["airodump-ng", "--write-interval", "1", "--write", prefix,
                  "--output-format", "csv", iface],
-                stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.PIPE,
+                text=True,
             )
+            self._log(f"airodump-ng iniciado en {iface} (pid={self._scan_process.pid})")
             t = threading.Thread(
                 target=self._scan_loop,
-                args=(prefix + "-01.csv",),
+                args=(csv_file,),
                 daemon=True,
             )
             t.start()
-            self._log(f"Escaneo iniciado en {iface}")
             return True
         except Exception as e:
             self._scanning = False
-            self._log(f"Error iniciando escaneo: {e}")
+            self._log(f"Error iniciando airodump-ng: {e}")
             return False
 
     def _scan_loop(self, csv_file: str):
         from core.utils import parse_airodump_csv
+
+        # Wait up to 12s for the CSV to appear (airodump latency)
+        for _ in range(12):
+            if not self._scanning:
+                return
+            if self._scan_process and self._scan_process.poll() is not None:
+                # Process already dead — capture stderr for diagnostics
+                try:
+                    err = self._scan_process.stderr.read(2000)
+                    if err:
+                        self._log(f"airodump-ng stderr: {err.strip()}")
+                except Exception:
+                    pass
+                self._log("airodump-ng terminó antes de crear el CSV — comprueba el modo monitor")
+                self._scanning = False
+                return
+            if os.path.exists(csv_file):
+                break
+            time.sleep(1)
+
+        if not os.path.exists(csv_file):
+            # Try sibling files in case airodump chose a different suffix
+            from pathlib import Path as _P
+            candidates = sorted(_P(csv_file).parent.glob("scan*.csv"), key=lambda f: f.stat().st_mtime, reverse=True)
+            if candidates:
+                csv_file = str(candidates[0])
+                self._log(f"Usando CSV alternativo: {csv_file}")
+            else:
+                self._log(f"No se generó el CSV de escaneo — verifica que {csv_file.split('/')[-2]} tenga permisos")
+                self._scanning = False
+                return
+
         while self._scanning:
+            if self._scan_process and self._scan_process.poll() is not None:
+                try:
+                    err = self._scan_process.stderr.read(2000)
+                    if err:
+                        self._log(f"airodump-ng: {err.strip()}")
+                except Exception:
+                    pass
+                self._log("airodump-ng se cerró inesperadamente")
+                self._scanning = False
+                break
             try:
-                if os.path.exists(csv_file):
-                    aps, _ = parse_airodump_csv(csv_file)
-                    self._networks = aps
+                aps, _ = parse_airodump_csv(csv_file)
+                self._networks = aps
+                if aps:
                     self._emit_scan(aps)
             except Exception as e:
                 self._log(f"Error parseando CSV: {e}")
