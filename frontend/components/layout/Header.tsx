@@ -2,7 +2,7 @@
 
 import { usePathname } from 'next/navigation'
 import { clsx } from 'clsx'
-import { Wifi, WifiOff, AlertTriangle, Target, X } from 'lucide-react'
+import { Wifi, WifiOff, AlertTriangle, Target, Trash2 } from 'lucide-react'
 import { useWebSocket } from '@/lib/websocket'
 import { useWifi } from '@/lib/context'
 
@@ -35,10 +35,10 @@ export function Header() {
           <span className="text-orange-400/60 shrink-0">CH{target.channel}</span>
           <button
             onClick={() => setTarget(null)}
-            className="ml-1 hover:text-orange-200 transition-colors shrink-0"
+            className="ml-1 p-0.5 rounded hover:bg-red-500/20 text-red-500 hover:text-red-400 transition-colors shrink-0"
             title="Eliminar target"
           >
-            <X className="w-3 h-3" />
+            <Trash2 className="w-3 h-3" />
           </button>
         </div>
       )}

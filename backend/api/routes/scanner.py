@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import Optional
 from core.wifi_manager import wifi_manager
+from core.utils import validate_bssid
 
 router = APIRouter()
 
@@ -50,3 +51,28 @@ async def scan_status():
         "networks_found": len(wifi_manager.get_networks()),
         "interface": wifi_manager.monitor_interface,
     }
+
+
+class RevealRequest(BaseModel):
+    bssid: str
+    channel: Optional[int] = None
+
+
+@router.post("/reveal-essid")
+async def reveal_essid(req: RevealRequest):
+    """Send a quick deauth to a hidden network so clients reconnect and reveal the ESSID.
+    The running airodump-ng scan will pick up the ESSID automatically."""
+    if not validate_bssid(req.bssid):
+        raise HTTPException(status_code=400, detail="BSSID inválido")
+    if not wifi_manager._scanning:
+        raise HTTPException(status_code=400, detail="El escáner debe estar activo para revelar el ESSID")
+
+    iface = wifi_manager.monitor_interface
+    if not iface:
+        raise HTTPException(status_code=400, detail="No hay interfaz en modo monitor")
+
+    # Send 2 deauth packets — enough to force a reconnect without losing the client
+    ok = wifi_manager.send_deauth(req.bssid, None, 2, iface)
+    if not ok:
+        raise HTTPException(status_code=500, detail="No se pudo enviar deauth")
+    return {"success": True, "message": f"Deauth enviado a {req.bssid}, esperando que el ESSID aparezca en el escaneo..."}
