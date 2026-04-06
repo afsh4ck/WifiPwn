@@ -42,11 +42,18 @@ export function WifiProvider({ children }: { children: ReactNode }) {
   const [networks, setNetworksRaw] = useState<Network[]>(() => load<Network[]>(LS_NETS, []))
   const [target,   setTargetRaw]   = useState<Network | null>(() => load<Network | null>(LS_TARGET, null))
 
-  const sortByPower = (nets: Network[]) =>
-    [...nets].sort((a, b) => (Number(b.power) || -100) - (Number(a.power) || -100))
+  const sortNetworks = (nets: Network[]) =>
+    [...nets].sort((a, b) => {
+      // Primary: traffic (ivs / #Data) desc — high-traffic networks yield handshakes easier
+      const da = Number(b.ivs) || 0
+      const db2 = Number(a.ivs) || 0
+      if (da !== db2) return da - db2
+      // Secondary: signal strength desc
+      return (Number(b.power) || -100) - (Number(a.power) || -100)
+    })
 
   const setNetworks = useCallback((nets: Network[]) => {
-    const sorted = sortByPower(nets)
+    const sorted = sortNetworks(nets)
     setNetworksRaw(sorted)
     save(LS_NETS, sorted)
   }, [])
@@ -56,7 +63,7 @@ export function WifiProvider({ children }: { children: ReactNode }) {
     setNetworksRaw(prev => {
       const map = new Map(prev.map(n => [n.bssid, n]))
       for (const n of incoming) map.set(n.bssid, n)
-      const merged = [...map.values()].sort((a, b) => (Number(b.power) || -100) - (Number(a.power) || -100))
+      const merged = sortNetworks([...map.values()])
       save(LS_NETS, merged)
       return merged
     })
