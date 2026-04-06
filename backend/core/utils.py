@@ -178,9 +178,11 @@ def check_handshake_in_cap(cap_file: str) -> Tuple[bool, str]:
     if not os.path.exists(cap_file):
         return False, "Archivo no encontrado"
     try:
-        rc, stdout, _ = run_command(["aircrack-ng", cap_file], timeout=30)
-        # aircrack-ng reports handshakes in stdout regardless of exit code
-        if "1 handshake" in stdout or "handshake" in stdout.lower() and "0 handshake" not in stdout:
+        rc, stdout, stderr = run_command(["aircrack-ng", cap_file], timeout=30)
+        out = stdout + stderr
+        if "1 handshake" in out:
+            return True, "Handshake encontrado"
+        if ("handshake" in out.lower()) and ("0 handshake" not in out):
             return True, "Handshake encontrado"
         return False, "No se encontró handshake"
     except Exception as e:

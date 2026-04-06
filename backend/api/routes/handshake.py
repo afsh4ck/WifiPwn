@@ -44,6 +44,15 @@ async def start_capture(req: CaptureRequest):
     if not iface:
         raise HTTPException(status_code=400, detail="No hay interfaz en modo monitor")
 
+    # Auto-enable monitor mode if needed
+    from core.utils import get_interface_info
+    info = get_interface_info(iface)
+    if info.get("mode", "").lower() != "monitor":
+        ok_mon, msg = wifi_manager.enable_monitor_mode(iface)
+        if not ok_mon:
+            raise HTTPException(status_code=500, detail=f"No se pudo activar monitor: {msg}")
+        iface = wifi_manager.monitor_interface or iface
+
     out = req.output_file
     if not out:
         ts = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -53,11 +62,12 @@ async def start_capture(req: CaptureRequest):
     def on_hs(bssid: str):
         # Emit WebSocket event immediately
         handshake_detected_sync(bssid)
-        # Persist to DB
+        # Persist to DB — find actual .cap file
+        cap = wifi_manager._find_cap_file(out) or (out + "-01.cap")
         net = db.get_network_by_bssid(bssid)
         if net:
-            db.add_handshake(net["id"], out + "-01.cap")
-        db.log_action("Handshake capturado", f"BSSID: {bssid}")
+            db.add_handshake(net["id"], cap)
+        db.log_action("Handshake capturado", f"BSSID: {bssid} → {cap}")
     ok = wifi_manager.start_capture(req.bssid, req.channel, out, iface, on_hs)
     if not ok:
         # If a stale capture is blocking, stop it and retry once
@@ -93,6 +103,12 @@ async def send_deauth(req: DeauthRequest):
     iface = req.interface or wifi_manager.monitor_interface
     if not iface:
         raise HTTPException(status_code=400, detail="No hay interfaz disponible")
+    # Auto-enable monitor mode if needed
+    from core.utils import get_interface_info as _info
+    if _info(iface).get("mode", "").lower() != "monitor":
+        ok_mon, _ = wifi_manager.enable_monitor_mode(iface)
+        if ok_mon:
+            iface = wifi_manager.monitor_interface or iface
     ok = wifi_manager.send_deauth(req.bssid, req.client, req.count, iface)
     return {"success": ok}
 

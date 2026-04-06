@@ -26,6 +26,15 @@ async def send_deauth(req: DeauthRequest):
     if not iface:
         raise HTTPException(status_code=400, detail="No hay interfaz en modo monitor")
 
+    # Auto-enable monitor mode if needed
+    from core.utils import get_interface_info
+    info = get_interface_info(iface)
+    if info.get("mode", "").lower() != "monitor":
+        ok_mon, msg = wifi_manager.enable_monitor_mode(iface)
+        if not ok_mon:
+            raise HTTPException(status_code=500, detail=f"No se pudo activar monitor: {msg}")
+        iface = wifi_manager.monitor_interface or iface
+
     ok = wifi_manager.send_deauth(req.bssid, req.client, req.packets, iface)
     if not ok:
         raise HTTPException(status_code=500, detail="No se pudo enviar deauth")

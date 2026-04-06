@@ -272,15 +272,33 @@ class WiFiManager:
         # Replace per-capture callback (avoids list growing across sessions)
         self._capture_cb = on_handshake
 
+        # Ensure captures directory exists
+        cap_dir = os.path.dirname(output_prefix)
+        if cap_dir:
+            os.makedirs(cap_dir, exist_ok=True)
+
+        # Remove stale capture files with this prefix to force airodump to use -01
+        import glob
+        for f in glob.glob(output_prefix + "*"):
+            try:
+                os.remove(f)
+            except OSError:
+                pass
+
         try:
             self._capture_process = subprocess.Popen(
                 ["airodump-ng", "--channel", str(channel), "--bssid", bssid,
-                 "--write", output_prefix, iface],
+                 "--write", output_prefix, "--output-format", "pcap", iface],
                 stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
             )
+            # Stream airodump stderr in background for diagnostics
+            threading.Thread(
+                target=self._stream_capture_stderr,
+                daemon=True,
+            ).start()
             threading.Thread(
                 target=self._monitor_handshake,
-                args=(output_prefix + "-01.cap", bssid),
+                args=(output_prefix, bssid),
                 daemon=True,
             ).start()
             self._log(f"Captura iniciada: {bssid} canal {channel}")
@@ -290,20 +308,40 @@ class WiFiManager:
             self._log(f"Error captura: {e}")
             return False
 
-    def _monitor_handshake(self, cap_file: str, bssid: str):
+    def _stream_capture_stderr(self):
+        """Read airodump-ng stderr and log it so the user sees progress."""
+        proc = self._capture_process
+        if not proc or not proc.stderr:
+            return
+        try:
+            for line in proc.stderr:
+                line = line.strip()
+                if line and self._capturing:
+                    self._log(f"[airodump] {line}")
+        except Exception:
+            pass
+
+    def _find_cap_file(self, prefix: str) -> Optional[str]:
+        """Find the actual .cap file created by airodump (handles -01,-02... suffixes)."""
+        import glob
+        candidates = sorted(glob.glob(prefix + "*.cap"))
+        return candidates[-1] if candidates else None
+
+    def _monitor_handshake(self, output_prefix: str, bssid: str):
         from core.utils import check_handshake_in_cap
         checks = 0
         while self._capturing and checks < 300:
             time.sleep(2)
             checks += 1
-            if os.path.exists(cap_file):
-                found, _ = check_handshake_in_cap(cap_file)
+            cap = self._find_cap_file(output_prefix)
+            if cap:
+                found, _ = check_handshake_in_cap(cap)
                 if found:
                     self._emit_handshake(bssid)
-                    self._log(f"HANDSHAKE detectado: {bssid}")
+                    self._log(f"HANDSHAKE detectado: {bssid} ({cap})")
                     return
         if self._capturing:
-            self._log("Timeout: no se capturó handshake")
+            self._log("Timeout: no se capturó handshake tras 10 min")
 
     def stop_capture(self) -> bool:
         self._capturing = False

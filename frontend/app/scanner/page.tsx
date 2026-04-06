@@ -1,13 +1,13 @@
 'use client'
 
-import { useState, useCallback, useEffect, useRef } from 'react'
-import { Play, Square, RefreshCw, Wifi, WifiOff, AlertTriangle } from 'lucide-react'
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react'
+import { Play, Square, RefreshCw, Wifi, WifiOff, AlertTriangle, ShieldAlert } from 'lucide-react'
 import { getInterfaces, getInterfaceInfo, enableMonitor, startScan, stopScan, getNetworks } from '@/lib/api'
 import { NetworkTable } from '@/components/ui/NetworkTable'
 import { StatusBadge } from '@/components/ui/Badge'
 import { useWebSocket } from '@/lib/websocket'
 import { useWifi } from '@/lib/context'
-import type { WifiInterface } from '@/types'
+import type { WifiInterface, Network } from '@/types'
 
 export default function ScannerPage() {
   const { networks, mergeNetworks, clearNetworks, target, setTarget } = useWifi()
@@ -21,6 +21,33 @@ export default function ScannerPage() {
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const { networks: wsNets, connected } = useWebSocket()
+
+  // ── Vulnerability scoring ──────────────────────────────────────────
+  const vulnScore = useCallback((n: Network): number => {
+    const enc = (n.security || '').toUpperCase()
+    let score = 0
+    // Encryption weakness (higher = more vulnerable)
+    if (enc.includes('OPN') || enc === '' || enc === 'OPEN')       score += 100
+    else if (enc.includes('WEP'))                                   score += 80
+    else if (enc.includes('WPA') && !enc.includes('WPA2'))          score += 40
+    else if (enc.includes('WPA2') && !enc.includes('WPA3'))         score += 20
+    else if (enc.includes('WPA3'))                                  score += 5
+    // Signal strength bonus (closer = easier to attack)
+    const pwr = typeof n.power === 'number' ? n.power : -100
+    score += Math.max(0, 100 + pwr) / 2  // -30dBm → +35, -80dBm → +10
+    // WPS bonus
+    if (n.wps) score += 15
+    // TKIP is weaker than CCMP
+    if ((n.cipher || '').toUpperCase().includes('TKIP')) score += 10
+    return score
+  }, [])
+
+  const top5Vuln = useMemo(() => {
+    if (networks.length === 0) return []
+    return [...networks]
+      .sort((a, b) => vulnScore(b) - vulnScore(a))
+      .slice(0, 5)
+  }, [networks, vulnScore])
 
   // WS live updates take priority when scanning
   useEffect(() => {
@@ -212,6 +239,37 @@ export default function ScannerPage() {
             <div><span className="text-gray-500 text-xs">CIPHER</span><br /><span className="text-gray-300">{target.cipher}</span></div>
             <div><span className="text-gray-500 text-xs">AUTH</span><br /><span className="text-gray-300">{target.authentication}</span></div>
             <div><span className="text-gray-500 text-xs">PWR</span><br /><span className="text-orange-400">{target.power} dBm</span></div>
+          </div>
+        </div>
+      )}
+
+      {/* Top 5 most vulnerable */}
+      {top5Vuln.length > 0 && (
+        <div className="card p-0 overflow-hidden border-red-500/20">
+          <div className="flex items-center gap-2 px-5 py-3 border-b border-red-500/20 bg-red-500/5">
+            <ShieldAlert className="w-4 h-4 text-red-400" />
+            <p className="text-sm font-semibold text-red-400 tracking-wide">TOP 5 — REDES MÁS VULNERABLES</p>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-5 divide-y sm:divide-y-0 sm:divide-x divide-border/30">
+            {top5Vuln.map((n, i) => {
+              const enc = (n.security || 'OPN').toUpperCase()
+              const isOpen = enc.includes('OPN') || enc === '' || enc === 'OPEN'
+              const isWep = enc.includes('WEP')
+              const color = isOpen ? 'text-red-400' : isWep ? 'text-orange-400' : 'text-yellow-400'
+              return (
+                <button
+                  key={n.bssid}
+                  className="flex flex-col items-center gap-1.5 px-3 py-3 hover:bg-surface/60 transition-colors cursor-pointer text-center"
+                  onClick={() => setTarget(n)}
+                >
+                  <span className="text-[10px] font-bold text-muted">#{i + 1}</span>
+                  <span className="text-xs font-bold text-text truncate max-w-full">{n.essid || '(oculta)'}</span>
+                  <span className={`text-[11px] font-mono font-bold ${color}`}>{enc || 'OPN'}</span>
+                  <span className="text-[10px] text-muted font-mono">{n.bssid}</span>
+                  <span className="text-[10px] text-muted">CH{n.channel} · {n.power}dBm</span>
+                </button>
+              )
+            })}
           </div>
         </div>
       )}
