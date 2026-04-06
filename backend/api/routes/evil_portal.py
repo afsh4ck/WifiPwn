@@ -15,11 +15,11 @@ from api.websocket import log_sync, broadcast_sync
 
 router = APIRouter()
 
-TEMPLATES_DIR = Path("/app/templates")
+# Prefer source-relative path so templates work both in Docker (/app/backend/templates)
+# and when running natively. Fall back to /app/templates (volume mount) if needed.
+TEMPLATES_DIR = Path(__file__).parent.parent.parent / "templates"
 if not TEMPLATES_DIR.exists():
-    TEMPLATES_DIR = Path(__file__).parent.parent.parent.parent / "backend" / "templates"
-    if not TEMPLATES_DIR.exists():
-        TEMPLATES_DIR = Path(__file__).parent.parent.parent / "templates"
+    TEMPLATES_DIR = Path("/app/templates")
 
 PORTAL_TEMPLATES = {
     "default":   "default_portal.html",
