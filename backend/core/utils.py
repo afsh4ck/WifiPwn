@@ -6,6 +6,8 @@ import os
 import subprocess
 import shutil
 import random
+import tempfile
+import logging
 from typing import List, Tuple, Optional, Dict
 from pathlib import Path
 
@@ -192,7 +194,6 @@ def check_handshake_in_cap(cap_file: str, bssid: str = None) -> Tuple[bool, str]
         pass
 
     # Take a snapshot copy so aircrack/tshark don't collide with airodump writes
-    import shutil, tempfile, logging
     log = logging.getLogger("wifipwn.handshake")
     snap = None
     try:
