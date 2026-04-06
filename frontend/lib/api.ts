@@ -4,6 +4,7 @@ import type {
   Credential,
   Campaign,
   CampaignTarget,
+  Report,
   WifiInterface,
   Stats,
   LogEntry,
@@ -32,8 +33,8 @@ async function req<T>(url: string, options?: RequestInit): Promise<T> {
 }
 
 const get  = <T>(url: string) => req<T>(url)
-const post = <T>(url: string, body?: unknown) =>
-  req<T>(url, { method: 'POST', body: body ? JSON.stringify(body) : undefined })
+const post = <T>(url: string, body?: unknown, method = 'POST') =>
+  req<T>(url, { method, body: body ? JSON.stringify(body) : undefined })
 const del  = <T>(url: string) => req<T>(url, { method: 'DELETE' })
 
 // ─── Health ──────────────────────────────────────────────────────────
@@ -89,8 +90,9 @@ export const stopDeauth    = () => post('/deauth/stop')
 export const getDeauthHistory = () => get<Record<string, unknown>[]>('/deauth/history')
 
 // ─── Evil Portal ─────────────────────────────────────────────────────
-export const startPortal  = (ssid: string, iface: string, passphrase?: string, channel?: number) =>
-  post('/evil-portal/start', { ssid, interface: iface, passphrase, channel })
+export const getPortalTemplates = () => get<{ id: string; name: string; desc: string }[]>('/evil-portal/templates')
+export const startPortal  = (ssid: string, iface: string, passphrase?: string, channel?: number, template?: string) =>
+  post('/evil-portal/start', { ssid, interface: iface, password: passphrase, channel, template })
 export const stopPortal   = () => post('/evil-portal/stop')
 export const getPortalStatus = () => get<PortalStatus>('/evil-portal/status')
 export const getPortalCredentials = () => get<Credential[]>('/evil-portal/credentials')
@@ -102,9 +104,21 @@ export const createCampaign = (name: string, description?: string) =>
 export const getCampaign    = (id: number) => get<Campaign>(`/campaigns/${id}`)
 export const deleteCampaign = (id: number) => del(`/campaigns/${id}`)
 export const getTargets     = (id: number) => get<CampaignTarget[]>(`/campaigns/${id}/targets`)
-export const addTarget      = (id: number, networkId: number) =>
-  post(`/campaigns/${id}/targets`, { network_id: networkId })
-export const removeTarget   = (id: number, targetId: number) =>
-  del(`/campaigns/${id}/targets/${targetId}`)
-export const getCampaignReport = (id: number) =>
-  fetch(BASE + `/campaigns/${id}/report`).then(r => r.text())
+export const addTarget      = (campaignId: number, net: Partial<import('@/types').Network>) =>
+  post(`/campaigns/${campaignId}/targets`, {
+    bssid: net.bssid, essid: net.essid, channel: net.channel,
+    security: net.security, cipher: net.cipher,
+    authentication: net.authentication, power: net.power,
+  })
+export const removeTarget   = (id: number, targetId: number) => del(`/campaigns/${id}/targets/${targetId}`)
+export const setTargetTechniques = (campaignId: number, targetId: number, techniques: string[]) =>
+  post(`/campaigns/${campaignId}/targets/${targetId}/techniques`, { techniques }, 'PUT')
+export const startAudit     = (campaignId: number) => post(`/campaigns/${campaignId}/audit/start`)
+export const getAuditStatus = (campaignId: number) => get<{ running: boolean; progress: unknown[] }>(`/campaigns/${campaignId}/audit/status`)
+export const generateReport = (campaignId: number) => post<{ id: number; filename: string; size: number }>(`/campaigns/${campaignId}/report`)
+export const getCampaignReport = (campaignId: number) => get<unknown>(`/campaigns/${campaignId}/report`)
+export const listReports    = () => get<Report[]>('/campaigns/reports/all')
+export const listCampaignReports = (campaignId: number) => get<Report[]>(`/campaigns/${campaignId}/reports`)
+export const downloadReport = (reportId: number) => `${BASE}/campaigns/reports/${reportId}/download`
+export const viewReportUrl  = (reportId: number) => `${BASE}/campaigns/reports/${reportId}/view`
+export const deleteReport   = (reportId: number) => del(`/campaigns/reports/${reportId}`)

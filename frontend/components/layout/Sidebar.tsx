@@ -13,6 +13,7 @@ import {
   Globe,
   Target,
   Shield,
+  BarChart3,
 } from 'lucide-react'
 
 const NAV = [
@@ -24,6 +25,7 @@ const NAV = [
   { href: '/deauth',       label: 'Deauth',        icon: Skull            },
   { href: '/evil-portal',  label: 'Evil Portal',   icon: Globe            },
   { href: '/campaigns',    label: 'Campañas',      icon: Target           },
+  { href: '/reports',      label: 'Reportes',      icon: BarChart3        },
 ]
 
 export function Sidebar() {

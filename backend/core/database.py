@@ -159,7 +159,36 @@ class DatabaseManager:
         conn = sqlite3.connect(str(self.db_path))
         conn.executescript(schema)
         conn.commit()
+        # Migrations for columns added after initial schema
+        self._migrate(conn)
         conn.close()
+
+    # ------------------------------------------------------------------
+    # Schema migrations
+    # ------------------------------------------------------------------
+
+    def _migrate(self, conn: sqlite3.Connection):
+        """Add columns / tables introduced after the initial schema."""
+        migrations = [
+            "ALTER TABLE campaign_targets ADD COLUMN techniques TEXT DEFAULT '[]'",
+            "ALTER TABLE campaign_targets ADD COLUMN audit_status TEXT DEFAULT 'pending'",
+            "ALTER TABLE campaign_targets ADD COLUMN audit_result TEXT",
+            """CREATE TABLE IF NOT EXISTS reports (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                campaign_id INTEGER,
+                filename TEXT NOT NULL,
+                filepath TEXT NOT NULL,
+                created_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                size INTEGER DEFAULT 0,
+                FOREIGN KEY (campaign_id) REFERENCES campaigns(id) ON DELETE CASCADE
+            )""",
+        ]
+        for sql in migrations:
+            try:
+                conn.execute(sql)
+                conn.commit()
+            except Exception:
+                pass  # Column / table already exists
 
     # ------------------------------------------------------------------
     # Networks
@@ -328,6 +357,58 @@ class DatabaseManager:
                 WHERE ct.campaign_id=?
             """, (campaign_id,))
             return [dict(r) for r in cur.fetchall()]
+
+    def set_target_techniques(self, target_id: int, techniques: List[str]):
+        with self.cursor() as cur:
+            cur.execute(
+                "UPDATE campaign_targets SET techniques=? WHERE id=?",
+                (json.dumps(techniques), target_id),
+            )
+
+    def update_target_status(self, target_id: int, status: str, result: Dict = None):
+        with self.cursor() as cur:
+            cur.execute(
+                "UPDATE campaign_targets SET audit_status=?,audit_result=? WHERE id=?",
+                (status, json.dumps(result) if result else None, target_id),
+            )
+
+    # ------------------------------------------------------------------
+    # Reports
+    # ------------------------------------------------------------------
+
+    def save_report(self, campaign_id: int, filename: str, filepath: str, size: int = 0) -> int:
+        with self.cursor() as cur:
+            cur.execute(
+                "INSERT INTO reports (campaign_id,filename,filepath,size) VALUES (?,?,?,?)",
+                (campaign_id, filename, filepath, size),
+            )
+            return cur.lastrowid
+
+    def get_reports(self, campaign_id: int = None) -> List[Dict]:
+        with self.cursor() as cur:
+            if campaign_id:
+                cur.execute("""
+                    SELECT r.*, c.name as campaign_name FROM reports r
+                    LEFT JOIN campaigns c ON r.campaign_id=c.id
+                    WHERE r.campaign_id=? ORDER BY r.created_date DESC
+                """, (campaign_id,))
+            else:
+                cur.execute("""
+                    SELECT r.*, c.name as campaign_name FROM reports r
+                    LEFT JOIN campaigns c ON r.campaign_id=c.id
+                    ORDER BY r.created_date DESC
+                """)
+            return [dict(r) for r in cur.fetchall()]
+
+    def delete_report(self, report_id: int) -> Optional[str]:
+        with self.cursor() as cur:
+            cur.execute("SELECT filepath FROM reports WHERE id=?", (report_id,))
+            row = cur.fetchone()
+            if not row:
+                return None
+            filepath = row["filepath"]
+            cur.execute("DELETE FROM reports WHERE id=?", (report_id,))
+        return filepath
 
     # ------------------------------------------------------------------
     # Deauth

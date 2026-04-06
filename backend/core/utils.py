@@ -177,16 +177,47 @@ def get_interface_info(interface: str) -> Dict:
 def check_handshake_in_cap(cap_file: str) -> Tuple[bool, str]:
     if not os.path.exists(cap_file):
         return False, "Archivo no encontrado"
+
+    # Skip empty / header-only files (pcap global header is 24 bytes)
+    try:
+        if os.path.getsize(cap_file) < 100:
+            return False, "Archivo vacío — airodump aún no ha capturado paquetes"
+    except Exception:
+        pass
+
+    # ── Method 1: aircrack-ng ─────────────────────────────────────────
     try:
         rc, stdout, stderr = run_command(["aircrack-ng", cap_file], timeout=30)
         out = stdout + stderr
-        if "1 handshake" in out:
-            return True, "Handshake encontrado"
-        if ("handshake" in out.lower()) and ("0 handshake" not in out):
-            return True, "Handshake encontrado"
-        return False, "No se encontró handshake"
-    except Exception as e:
-        return False, str(e)
+        # Matches "1 handshake", "2 handshakes", "3 handshakes", etc.
+        if re.search(r'\b[1-9]\d*\s+handshake', out, re.IGNORECASE):
+            return True, "Handshake encontrado (aircrack-ng)"
+        # Explicit zero — no need to try further for this iteration
+        if re.search(r'\b0\s+handshake', out, re.IGNORECASE):
+            pass  # fall through to tshark for a second opinion
+    except Exception:
+        pass
+
+    # ── Method 2: tshark EAPOL frame count ───────────────────────────
+    # A complete 4-way handshake needs ≥ 4 EAPOL frames.
+    # Even 2–3 frames are sometimes crackable with partial handshakes.
+    try:
+        rc2, stdout2, _ = run_command(
+            ["tshark", "-r", cap_file, "-Y", "eapol",
+             "-T", "fields", "-e", "frame.number"],
+            timeout=15,
+        )
+        if rc2 == 0 and stdout2.strip():
+            frames = [l for l in stdout2.strip().split("\n") if l.strip()]
+            count = len(frames)
+            if count >= 4:
+                return True, f"Handshake completo ({count} frames EAPOL)"
+            if count >= 2:
+                return True, f"Handshake parcial ({count} frames EAPOL) — puede ser suficiente"
+    except Exception:
+        pass
+
+    return False, "No se encontró handshake"
 
 
 def generate_random_mac() -> str:

