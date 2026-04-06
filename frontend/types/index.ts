@@ -7,6 +7,7 @@ export interface Network {
   cipher: string
   authentication: string
   power: number
+  speed?: number
   beacons?: number
   ivs?: number
   lan_ip?: string

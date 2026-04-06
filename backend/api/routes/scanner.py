@@ -19,9 +19,22 @@ async def get_networks():
 async def start_scan(req: ScanRequest):
     iface = req.interface or wifi_manager.monitor_interface
     if not iface:
-        raise HTTPException(status_code=400, detail="No hay interfaz en modo monitor")
+        raise HTTPException(status_code=400, detail="No hay interfaz seleccionada")
+
+    # Auto-enable monitor mode if not already active
+    monitor_enabled = False
+    if not wifi_manager.is_monitor_mode(iface):
+        ok, msg = wifi_manager.enable_monitor_mode(iface)
+        if not ok:
+            raise HTTPException(
+                status_code=500,
+                detail=f"No se pudo activar modo monitor en {iface}: {msg}"
+            )
+        iface = wifi_manager.monitor_interface  # may have been renamed
+        monitor_enabled = True
+
     ok = wifi_manager.start_scan(iface)
-    return {"success": ok, "interface": iface}
+    return {"success": ok, "interface": iface, "monitor_enabled": monitor_enabled}
 
 
 @router.post("/stop")
