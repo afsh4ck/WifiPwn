@@ -176,18 +176,45 @@ def get_interface_info(interface: str) -> Dict:
 
 
 def check_handshake_in_cap(cap_file: str, bssid: str = None) -> Tuple[bool, str]:
+    """Check if a capture file contains a WPA handshake for the given BSSID.
+
+    Takes a snapshot copy of the file first so we don't read a file that
+    airodump-ng is actively writing to (avoids corrupt/partial reads).
+    """
     if not os.path.exists(cap_file):
         return False, "Archivo no encontrado"
 
     try:
-        if os.path.getsize(cap_file) < 100:
+        fsize = os.path.getsize(cap_file)
+        if fsize < 100:
             return False, "Archivo vacío — airodump aún no ha capturado paquetes"
     except Exception:
         pass
 
+    # Take a snapshot copy so aircrack/tshark don't collide with airodump writes
+    import shutil, tempfile, logging
+    log = logging.getLogger("wifipwn.handshake")
+    snap = None
+    try:
+        fd, snap = tempfile.mkstemp(suffix=".cap")
+        os.close(fd)
+        shutil.copy2(cap_file, snap)
+    except Exception as e:
+        log.warning("check_hs: no pude copiar %s: %s", cap_file, e)
+        snap = cap_file  # fallback: read original
+
+    try:
+        return _check_hs_impl(snap, bssid, log)
+    finally:
+        if snap and snap != cap_file:
+            try:
+                os.unlink(snap)
+            except Exception:
+                pass
+
+
+def _check_hs_impl(cap_file: str, bssid: Optional[str], log) -> Tuple[bool, str]:
     # ── Method 1: aircrack-ng ─────────────────────────────────────────
-    # With -b <bssid> aircrack-ng auto-selects the network (non-interactive).
-    # stdin=DEVNULL (set in run_command) means it never blocks waiting for input.
     try:
         cmd = ["aircrack-ng"]
         if bssid:
@@ -195,51 +222,65 @@ def check_handshake_in_cap(cap_file: str, bssid: str = None) -> Tuple[bool, str]
         cmd.append(cap_file)
         rc, stdout, stderr = run_command(cmd, timeout=10)
         out = stdout + stderr
+        log.debug("aircrack-ng rc=%d | %.300s", rc, out.replace("\n", " "))
         if re.search(r'\b[1-9]\d*\s+handshake', out, re.IGNORECASE):
             return True, "Handshake encontrado (aircrack-ng)"
-    except Exception:
-        pass
+    except Exception as e:
+        log.warning("aircrack-ng error: %s", e)
 
-    # ── Method 2: hcxpcapngtool (installed via hcxtools) ─────────────
-    # Converts pcap → hc22000 format; if output file is non-empty a
-    # full or partial handshake is present.
+    # ── Method 2: tshark EAPOL frame count ────────────────────────────
     try:
-        import tempfile
-        tmpf = tempfile.mktemp(suffix=".hc22000")
-        cmd2 = ["hcxpcapngtool", "-o", tmpf]
+        filter_expr = "eapol"
         if bssid:
-            # Filter by BSSID to avoid false positives from other networks
-            cmd2.extend(["--filterlist_ap", bssid, "--filtermode", "2"])
-        cmd2.append(cap_file)
-        rc2, stdout2, stderr2 = run_command(cmd2, timeout=10)
-        out2 = stdout2 + stderr2
-        sz = 0
-        try:
-            sz = os.path.getsize(tmpf)
-            os.unlink(tmpf)
-        except Exception:
-            pass
-        if sz > 0:
-            return True, "Handshake encontrado (hcxpcapngtool)"
-        # Also check status summary for non-zero EAPOL counts
-        if re.search(r'EAPOL\w*\s*\(.*?\)\s*\.+:\s*[1-9]', out2):
-            return True, "Handshake detectado (EAPOL frames)"
-    except Exception:
-        pass
-
-    # ── Method 3: tshark EAPOL frame count ───────────────────────────
-    try:
-        rc3, stdout3, _ = run_command(
-            ["tshark", "-r", cap_file, "-Y", "eapol",
+            bssid_lower = bssid.lower()
+            filter_expr = f"eapol && (wlan.addr=={bssid_lower})"
+        rc2, stdout2, stderr2 = run_command(
+            ["tshark", "-r", cap_file, "-Y", filter_expr,
              "-T", "fields", "-e", "frame.number"],
             timeout=10,
         )
-        if rc3 == 0 and stdout3.strip():
-            frames = [l for l in stdout3.strip().split("\n") if l.strip()]
+        log.debug("tshark rc=%d | frames=%s", rc2, stdout2.strip()[:100])
+        if rc2 == 0 and stdout2.strip():
+            frames = [l for l in stdout2.strip().split("\n") if l.strip()]
             if len(frames) >= 2:
                 return True, f"Handshake ({len(frames)} frames EAPOL)"
-    except Exception:
-        pass
+    except Exception as e:
+        log.warning("tshark error: %s", e)
+
+    # ── Method 3: hcxpcapngtool ──────────────────────────────────────
+    try:
+        fd3, tmpf = tempfile.mkstemp(suffix=".hc22000")
+        os.close(fd3)
+        cmd3 = ["hcxpcapngtool", "-o", tmpf]
+        # --filterlist_ap expects a FILE containing BSSIDs, one per line
+        bssid_file = None
+        if bssid:
+            fd4, bssid_file = tempfile.mkstemp(suffix=".txt")
+            os.close(fd4)
+            with open(bssid_file, "w") as bf:
+                # hcxpcapngtool wants BSSIDs without colons, lowercase
+                bf.write(bssid.replace(":", "").lower() + "\n")
+            cmd3.extend(["--filterlist_ap=" + bssid_file, "--filtermode=2"])
+        cmd3.append(cap_file)
+        rc3, stdout3, stderr3 = run_command(cmd3, timeout=10)
+        out3 = stdout3 + stderr3
+        log.debug("hcxpcapngtool rc=%d | %.200s", rc3, out3.replace("\n", " "))
+        sz = 0
+        try:
+            sz = os.path.getsize(tmpf)
+        except Exception:
+            pass
+        # Cleanup temp files
+        for tf in (tmpf, bssid_file):
+            if tf:
+                try:
+                    os.unlink(tf)
+                except Exception:
+                    pass
+        if sz > 0:
+            return True, "Handshake encontrado (hcxpcapngtool)"
+    except Exception as e:
+        log.warning("hcxpcapngtool error: %s", e)
 
     return False, "No se encontró handshake"
 

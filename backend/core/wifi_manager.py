@@ -289,7 +289,8 @@ class WiFiManager:
             self._capture_process = subprocess.Popen(
                 ["airodump-ng", "--channel", str(channel), "--bssid", bssid,
                  "--write", output_prefix, "--output-format", "pcap", iface],
-                stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+                stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True,
+                stdin=subprocess.DEVNULL,
             )
             # Stream airodump stderr in background for diagnostics
             threading.Thread(
@@ -332,16 +333,16 @@ class WiFiManager:
         checks = 0
         auto_deauths = 0
         max_auto_deauths = 10
-        deauth_every = 15  # every 15 × 2s = 30s
+        deauth_every = 6   # every 6 × 5s = 30s
 
-        # Give airodump-ng 3 seconds to start and lock the channel, then send initial deauth
-        time.sleep(3)
+        # Give airodump-ng 5 seconds to start and lock the channel, then send initial deauth
+        time.sleep(5)
         if self._capturing and self.monitor_interface:
             self.send_deauth(bssid, None, 1, self.monitor_interface)
             self._log(f"[auto-deauth] Inicial → {bssid} (1 paquete)")
 
-        while self._capturing and checks < 300:
-            time.sleep(2)
+        while self._capturing and checks < 120:  # 120 × 5s = 10 min
+            time.sleep(5)
             checks += 1
 
             # Periodic deauth every ~30 s to force fresh reconnections
@@ -351,12 +352,24 @@ class WiFiManager:
                 self._log(f"[auto-deauth] #{auto_deauths} → {bssid}")
 
             cap = self._find_cap_file(output_prefix)
-            if cap:
-                found, msg = check_handshake_in_cap(cap, bssid)
-                if found:
-                    self._emit_handshake(bssid)
-                    self._log(f"HANDSHAKE detectado: {bssid} ({cap}) — {msg}")
-                    return
+            if not cap:
+                if checks <= 2:
+                    self._log("[monitor] Esperando archivo .cap...")
+                continue
+
+            found, msg = check_handshake_in_cap(cap, bssid)
+            if found:
+                self._emit_handshake(bssid)
+                self._log(f"✓ HANDSHAKE detectado: {bssid} ({cap}) — {msg}")
+                return
+            elif checks % 6 == 0:
+                # Log progress every ~30s so user knows detection is running
+                try:
+                    fsize = os.path.getsize(cap)
+                except Exception:
+                    fsize = 0
+                self._log(f"[monitor] Check #{checks}: {msg} (archivo: {fsize} bytes)")
+
         if self._capturing:
             self._log("Timeout: no se capturó handshake tras 10 min")
 
@@ -388,6 +401,7 @@ class WiFiManager:
         try:
             self._deauth_process = subprocess.Popen(
                 cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+                stdin=subprocess.DEVNULL,
             )
             target = client or "broadcast"
             self._log(f"Deauth: {packets} paquetes → {target}")
