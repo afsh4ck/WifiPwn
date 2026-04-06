@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { Play, Square, RefreshCw } from 'lucide-react'
 import { getInterfaces, startScan, stopScan, getNetworks } from '@/lib/api'
 import { NetworkTable } from '@/components/ui/NetworkTable'
@@ -15,6 +15,7 @@ export default function ScannerPage() {
   const [networks, setNetworks]     = useState<Network[]>([])
   const [chosenNet, setChosenNet]   = useState<Network | null>(null)
   const [error, setError]           = useState('')
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const { networks: wsNets, connected } = useWebSocket()
 
@@ -22,6 +23,19 @@ export default function ScannerPage() {
   useEffect(() => {
     if (scanning && wsNets.length > 0) setNetworks(wsNets)
   }, [wsNets, scanning])
+
+  // Polling fallback: every 3s while scanning (covers WebSocket gaps)
+  useEffect(() => {
+    if (scanning) {
+      pollRef.current = setInterval(async () => {
+        const data = await getNetworks().catch(() => [])
+        if (data.length > 0) setNetworks(data)
+      }, 3000)
+    } else {
+      if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null }
+    }
+    return () => { if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null } }
+  }, [scanning])
 
   const loadIfaces = useCallback(async () => {
     try {

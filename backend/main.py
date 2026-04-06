@@ -11,7 +11,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from api.websocket import router as ws_router, manager, log_sync, scan_update_sync, command_output_sync
+from api.websocket import router as ws_router, manager, log_sync, scan_update_sync, command_output_sync, init_event_loop
 from api.routes import dashboard, interfaces, scanner, handshake, cracking, deauth, evil_portal, campaigns
 from core.wifi_manager import wifi_manager
 from core.command_runner import command_manager
@@ -20,6 +20,10 @@ from core.command_runner import command_manager
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # ── Startup ─────────────────────────────────────────────────────────
+    # Store the running event loop so background threads can broadcast via WS
+    import asyncio
+    init_event_loop(asyncio.get_event_loop())
+
     # Conectar callbacks del wifi_manager al WebSocket
     wifi_manager.on_log(lambda msg: log_sync(msg, "info", "wifi"))
     wifi_manager.on_scan_update(lambda nets: scan_update_sync(nets))

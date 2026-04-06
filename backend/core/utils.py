@@ -218,19 +218,22 @@ def parse_airodump_csv(csv_file: str) -> Tuple[List[Dict], List[Dict]]:
                 continue
             parts = [p.strip() for p in line.split(",")]
             if section == "aps" and len(parts) >= 14:
+                def _int(v: str, default=0):
+                    try: return int(v.strip())
+                    except ValueError: return default
                 aps.append({
-                    "bssid":          parts[0],
-                    "first_seen":     parts[1],
-                    "last_seen":      parts[2],
-                    "channel":        parts[3],
-                    "speed":          parts[4],
-                    "privacy":        parts[5],
-                    "cipher":         parts[6],
-                    "authentication": parts[7],
-                    "power":          parts[8],
-                    "beacons":        parts[9],
-                    "iv":             parts[10],
-                    "essid":          parts[13] if len(parts) > 13 else "",
+                    "bssid":          parts[0].strip(),
+                    "first_seen":     parts[1].strip(),
+                    "last_seen":      parts[2].strip(),
+                    "channel":        _int(parts[3]),
+                    "speed":          _int(parts[4]),
+                    "security":       parts[5].strip(),
+                    "cipher":         parts[6].strip(),
+                    "authentication": parts[7].strip(),
+                    "power":          _int(parts[8]),
+                    "beacons":        _int(parts[9]),
+                    "ivs":            _int(parts[10]),
+                    "essid":          parts[13].strip() if len(parts) > 13 else "",
                 })
             elif section == "clients" and len(parts) >= 6:
                 clients.append({

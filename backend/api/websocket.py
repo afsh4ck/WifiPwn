@@ -7,8 +7,17 @@ Broadcast en tiempo real a todos los clientes conectados
 import json
 import asyncio
 from datetime import datetime
-from typing import List
+from typing import List, Optional
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+
+# The main event loop — captured at startup so background threads can broadcast.
+_main_loop: Optional[asyncio.AbstractEventLoop] = None
+
+
+def init_event_loop(loop: asyncio.AbstractEventLoop) -> None:
+    """Call once from the async lifespan to store the running event loop."""
+    global _main_loop
+    _main_loop = loop
 
 router = APIRouter()
 
@@ -98,7 +107,13 @@ manager = ConnectionManager()
 def broadcast_sync(message: dict):
     """Llama desde thread síncrono para emitir al WebSocket."""
     try:
-        loop = asyncio.get_event_loop()
+        loop = _main_loop
+        if loop is None:
+            # Fallback: try to get the running loop (Python 3.10+)
+            try:
+                loop = asyncio.get_running_loop()
+            except RuntimeError:
+                return
         if loop.is_running():
             asyncio.run_coroutine_threadsafe(manager.broadcast(message), loop)
     except Exception:
