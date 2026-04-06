@@ -21,7 +21,12 @@ async function req<T>(url: string, options?: RequestInit): Promise<T> {
   })
   if (!res.ok) {
     const err = await res.json().catch(() => ({ detail: res.statusText }))
-    throw new Error(err.detail || err.error || `HTTP ${res.status}`)
+    // FastAPI validation errors return detail as an array of objects
+    const detail = err.detail
+    const msg = Array.isArray(detail)
+      ? detail.map((d: { msg?: string; loc?: string[] }) => `${(d.loc ?? []).slice(-1)[0] ?? ''}: ${d.msg ?? d}`).join('; ')
+      : (typeof detail === 'string' ? detail : (err.error ?? `HTTP ${res.status}`))
+    throw new Error(msg)
   }
   return res.json()
 }

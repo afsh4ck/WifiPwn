@@ -23,7 +23,13 @@ class CaptureRequest(BaseModel):
 
 
 class CheckRequest(BaseModel):
-    cap_file: str
+    file: Optional[str] = None
+    cap_file: Optional[str] = None  # alias for backwards compat
+    bssid: Optional[str] = None
+
+    @property
+    def resolved_file(self) -> str:
+        return self.file or self.cap_file or ""
 
 
 @router.post("/start")
@@ -51,6 +57,10 @@ async def start_capture(req: CaptureRequest):
 
     ok = wifi_manager.start_capture(req.bssid, req.channel, out, iface, on_hs)
     if not ok:
+        # If a stale capture is blocking, stop it and retry once
+        wifi_manager.stop_capture()
+        ok = wifi_manager.start_capture(req.bssid, req.channel, out, iface, on_hs)
+    if not ok:
         raise HTTPException(status_code=500, detail="No se pudo iniciar la captura")
 
     if req.auto_deauth:
@@ -66,17 +76,27 @@ async def stop_capture():
     return {"success": ok}
 
 
+class DeauthRequest(BaseModel):
+    bssid: str
+    interface: Optional[str] = None
+    client: Optional[str] = None
+    count: int = 64
+
+
 @router.post("/deauth")
-async def send_deauth(bssid: str, packets: int = 10, client: str = None):
-    if not validate_bssid(bssid):
+async def send_deauth(req: DeauthRequest):
+    if not validate_bssid(req.bssid):
         raise HTTPException(status_code=400, detail="BSSID inválido")
-    ok = wifi_manager.send_deauth(bssid, client, packets)
+    iface = req.interface or wifi_manager.monitor_interface
+    if not iface:
+        raise HTTPException(status_code=400, detail="No hay interfaz disponible")
+    ok = wifi_manager.send_deauth(req.bssid, req.client, req.count, iface)
     return {"success": ok}
 
 
 @router.post("/check")
 async def check_handshake(req: CheckRequest):
-    found, msg = check_handshake_in_cap(req.cap_file)
+    found, msg = check_handshake_in_cap(req.resolved_file)
     return {"found": found, "message": msg}
 
 

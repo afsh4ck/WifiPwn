@@ -64,7 +64,9 @@ export default function HandshakePage() {
     try {
       await startCapture(bssid, channel, iface)
       setCapturing(true)
-    } catch (e: unknown) { setError((e as Error).message) }
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : String(e))
+    }
   }
 
   const handleStop = async () => {
@@ -76,7 +78,9 @@ export default function HandshakePage() {
     try {
       await sendDeauth(bssid, iface, undefined, 64)
       setLines(prev => [...prev, `[*] Enviando paquetes deauth a ${bssid}...`])
-    } catch (e: unknown) { setError((e as Error).message) }
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : String(e))
+    }
   }
 
   return (
