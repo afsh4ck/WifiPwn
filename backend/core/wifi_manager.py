@@ -352,7 +352,7 @@ class WiFiManager:
 
             cap = self._find_cap_file(output_prefix)
             if cap:
-                found, msg = check_handshake_in_cap(cap)
+                found, msg = check_handshake_in_cap(cap, bssid)
                 if found:
                     self._emit_handshake(bssid)
                     self._log(f"HANDSHAKE detectado: {bssid} ({cap}) — {msg}")

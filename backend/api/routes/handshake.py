@@ -115,7 +115,7 @@ async def send_deauth(req: DeauthRequest):
 
 @router.post("/check")
 async def check_handshake(req: CheckRequest):
-    found, msg = check_handshake_in_cap(req.resolved_file)
+    found, msg = check_handshake_in_cap(req.resolved_file, req.bssid)
     return {"found": found, "message": msg}
 
 
