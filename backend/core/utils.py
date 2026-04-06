@@ -72,6 +72,9 @@ def get_wireless_interfaces() -> List[Dict]:
         for line in stdout.split("\n"):
             # Interface sections start at column 0 (no leading whitespace)
             if line and not line[0].isspace() and line.strip():
+                # Skip non-wireless entries (e.g. "lo  no wireless extensions.")
+                if "no wireless extensions" in line.lower():
+                    continue
                 name = line.split()[0]
                 if name and name not in seen:
                     interfaces.append({"name": name, "type": "managed", "channel": "", "txpower": ""})

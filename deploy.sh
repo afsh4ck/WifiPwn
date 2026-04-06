@@ -312,7 +312,9 @@ fi
 
 # Install Python backend deps
 echo "[*] Instalando dependencias Python del backend..."
-pip3 install -q -r "$BACKEND_DIR/requirements.txt"
+pip3 install -q -r "$BACKEND_DIR/requirements.txt" 2>/dev/null || \
+    pip3 install -q --break-system-packages -r "$BACKEND_DIR/requirements.txt" 2>/dev/null || \
+    python3 -m pip install -q -r "$BACKEND_DIR/requirements.txt" --break-system-packages
 
 # Install Node.js frontend deps
 if [ -d "$FRONTEND_DIR" ]; then
@@ -344,14 +346,30 @@ trap cleanup EXIT INT TERM
 # Start FastAPI backend
 echo "[*] Iniciando API backend (puerto 8000)..."
 cd "$BACKEND_DIR"
-sudo python3 -m uvicorn main:app --host 0.0.0.0 --port 8000 --log-level info &
+python3 -m uvicorn main:app --host 0.0.0.0 --port 8000 --log-level warning &
 BACKEND_PID=$!
 
-# Wait for backend to be ready
-sleep 3
-if ! kill -0 "$BACKEND_PID" 2>/dev/null; then
-    echo "[!] Error: el backend no pudo iniciarse"
-    exit 1
+# Wait for backend with curl health-check (up to 15s)
+echo -n "[*] Esperando backend"
+for i in $(seq 1 15); do
+    sleep 1
+    if ! kill -0 "$BACKEND_PID" 2>/dev/null; then
+        echo ""
+        echo "[!] Error: el backend se ha cerrado inesperadamente"
+        echo "[!] Ejecuta manualmente para ver el error:"
+        echo "    cd '$BACKEND_DIR' && python3 -m uvicorn main:app --host 0.0.0.0 --port 8000"
+        exit 1
+    fi
+    if curl -sf http://localhost:8000/api/health >/dev/null 2>&1; then
+        echo " OK"
+        break
+    fi
+    echo -n "."
+done
+if ! curl -sf http://localhost:8000/api/health >/dev/null 2>&1; then
+    echo ""
+    echo "[!] Backend no responde tras 15s. Comprueba que el puerto 8000 no esté en uso:"
+    echo "    ss -tlnp | grep 8000"
 fi
 echo "[+] Backend API listo en http://localhost:8000"
 
