@@ -337,8 +337,8 @@ class WiFiManager:
         # Give airodump-ng 3 seconds to start and lock the channel, then send initial deauth
         time.sleep(3)
         if self._capturing and self.monitor_interface:
-            self.send_deauth(bssid, None, 3, self.monitor_interface)
-            self._log(f"[auto-deauth] Inicial → {bssid} (3 paquetes)")
+            self.send_deauth(bssid, None, 1, self.monitor_interface)
+            self._log(f"[auto-deauth] Inicial → {bssid} (1 paquete)")
 
         while self._capturing and checks < 300:
             time.sleep(2)
@@ -346,7 +346,7 @@ class WiFiManager:
 
             # Periodic deauth every ~30 s to force fresh reconnections
             if checks % deauth_every == 0 and auto_deauths < max_auto_deauths and self.monitor_interface:
-                self.send_deauth(bssid, None, 3, self.monitor_interface)
+                self.send_deauth(bssid, None, 1, self.monitor_interface)
                 auto_deauths += 1
                 self._log(f"[auto-deauth] #{auto_deauths} → {bssid}")
 

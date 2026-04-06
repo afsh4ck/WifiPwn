@@ -133,8 +133,8 @@ def _run_audit(campaign_id: int, targets: list):
 
         try:
             if "deauth" in techniques and iface:
-                wifi_manager.send_deauth(bssid, None, 3, iface)
-                result["findings"]["deauth"] = "3 paquetes enviados"
+                wifi_manager.send_deauth(bssid, None, 1, iface)
+                result["findings"]["deauth"] = "1 paquete enviado"
                 log_sync(f"[Audit] Deauth → {bssid}", "info", "campaign")
                 time.sleep(2)
 
@@ -159,7 +159,7 @@ def _run_audit(campaign_id: int, targets: list):
                     for _ in range(6):
                         if detected.wait(timeout=10):
                             break
-                        wifi_manager.send_deauth(bssid, None, 3, iface)
+                        wifi_manager.send_deauth(bssid, None, 1, iface)
 
                     wifi_manager.stop_capture()
                     wifi_manager._capture_cb = orig_cb
