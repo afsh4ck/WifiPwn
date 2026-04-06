@@ -6,6 +6,7 @@ import { getInterfaces, sendDeauthAttack, stopDeauth, getDeauthHistory } from '@
 import { Terminal } from '@/components/ui/Terminal'
 import { StatusBadge } from '@/components/ui/Badge'
 import { useWebSocket } from '@/lib/websocket'
+import { useWifi } from '@/lib/context'
 import type { WifiInterface } from '@/types'
 
 export default function DeauthPage() {
@@ -21,6 +22,12 @@ export default function DeauthPage() {
   const [error, setError]         = useState('')
 
   const { subscribe } = useWebSocket()
+  const { target } = useWifi()
+
+  // Pre-fill BSSID from global target
+  useEffect(() => {
+    if (target && !running) setBssid(target.bssid)
+  }, [target])
 
   useEffect(() => {
     getInterfaces().then(d => { setIfaces(d); if (d.length && !iface) setIface(d[0].name) }).catch(console.error)
@@ -61,6 +68,17 @@ export default function DeauthPage() {
 
   return (
     <div className="space-y-6">
+      {/* Target banner */}
+      {target && (
+        <div className="flex items-center gap-3 px-4 py-2.5 rounded-lg border border-orange-500/30 bg-orange-500/10 text-sm font-mono">
+          <span className="text-orange-400 text-xs tracking-widest">TARGET</span>
+          <span className="text-cyan-400">{target.bssid}</span>
+          {target.essid && <span className="text-white">— {target.essid}</span>}
+          <span className="text-yellow-400">CH{target.channel}</span>
+          <span className="text-gray-400 text-xs ml-auto">campos pre-llenados</span>
+        </div>
+      )}
+
       <div className="card border-danger/20 space-y-4">
         <p className="section-title flex items-center gap-2 text-danger">
           <Skull className="w-3.5 h-3.5" /> Ataque Deauthentication (802.11)

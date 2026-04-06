@@ -8,6 +8,7 @@ import {
 import { Terminal } from '@/components/ui/Terminal'
 import { StatusBadge } from '@/components/ui/Badge'
 import { useWebSocket } from '@/lib/websocket'
+import { useWifi } from '@/lib/context'
 import type { WifiInterface, Handshake } from '@/types'
 
 export default function HandshakePage() {
@@ -20,7 +21,16 @@ export default function HandshakePage() {
   const [lines, setLines]       = useState<string[]>([])
   const [error, setError]       = useState('')
 
+  const { target } = useWifi()
   const { subscribe, logs } = useWebSocket()
+
+  // Pre-fill BSSID and channel from global target
+  useEffect(() => {
+    if (target && !capturing) {
+      setBssid(target.bssid)
+      if (target.channel) setChannel(Number(target.channel))
+    }
+  }, [target])
 
   useEffect(() => {
     getInterfaces().then(d => {
@@ -71,6 +81,17 @@ export default function HandshakePage() {
 
   return (
     <div className="space-y-6">
+      {/* Target banner */}
+      {target && (
+        <div className="flex items-center gap-3 px-4 py-2.5 rounded-lg border border-orange-500/30 bg-orange-500/10 text-sm font-mono">
+          <span className="text-orange-400 text-xs tracking-widest">TARGET</span>
+          <span className="text-cyan-400">{target.bssid}</span>
+          {target.essid && <span className="text-white">— {target.essid}</span>}
+          <span className="text-yellow-400">CH{target.channel}</span>
+          <span className="text-gray-400 text-xs ml-auto">campos pre-llenados</span>
+        </div>
+      )}
+
       {/* Config */}
       <div className="card space-y-4">
         <p className="section-title">Configuración de captura</p>

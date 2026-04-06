@@ -6,16 +6,17 @@ import { getInterfaces, getInterfaceInfo, enableMonitor, startScan, stopScan, ge
 import { NetworkTable } from '@/components/ui/NetworkTable'
 import { StatusBadge } from '@/components/ui/Badge'
 import { useWebSocket } from '@/lib/websocket'
-import type { WifiInterface, Network } from '@/types'
+import { useWifi } from '@/lib/context'
+import type { WifiInterface } from '@/types'
 
 export default function ScannerPage() {
+  const { networks, mergeNetworks, clearNetworks, target, setTarget } = useWifi()
+
   const [ifaces, setIfaces]           = useState<WifiInterface[]>([])
   const [selected, setSelected]       = useState('')
   const [ifaceMode, setIfaceMode]     = useState<string>('')
   const [enablingMon, setEnablingMon] = useState(false)
   const [scanning, setScanning]       = useState(false)
-  const [networks, setNetworks]       = useState<Network[]>([])
-  const [chosenNet, setChosenNet]     = useState<Network | null>(null)
   const [error, setError]             = useState('')
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
@@ -23,7 +24,7 @@ export default function ScannerPage() {
 
   // WS live updates take priority when scanning
   useEffect(() => {
-    if (scanning && wsNets.length > 0) setNetworks(wsNets)
+    if (scanning && wsNets.length > 0) mergeNetworks(wsNets)
   }, [wsNets, scanning])
 
   // Polling fallback: every 3s while scanning
@@ -31,7 +32,7 @@ export default function ScannerPage() {
     if (scanning) {
       pollRef.current = setInterval(async () => {
         const data = await getNetworks().catch(() => [])
-        if (data.length > 0) setNetworks(data)
+        if (data.length > 0) mergeNetworks(data)
       }, 3000)
     } else {
       if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null }
@@ -85,7 +86,7 @@ export default function ScannerPage() {
   const handleStart = async () => {
     if (!selected) return
     setError('')
-    setNetworks([])
+    clearNetworks()
     try {
       await startScan(selected)   // backend auto-enables monitor if needed
       setScanning(true)
@@ -99,7 +100,7 @@ export default function ScannerPage() {
     try { await stopScan() } finally {
       setScanning(false)
       const data = await getNetworks().catch(() => [])
-      setNetworks(data)
+      if (data.length > 0) mergeNetworks(data)
       loadIfaceMode(selected)
     }
   }
@@ -169,8 +170,9 @@ export default function ScannerPage() {
           )}
 
           <button className="btn-ghost" title="Refrescar" onClick={async () => {
+            clearNetworks()
             const data = await getNetworks().catch(() => [])
-            setNetworks(data)
+            if (data.length > 0) mergeNetworks(data)
           }}>
             <RefreshCw className="w-4 h-4" />
           </button>
@@ -192,18 +194,24 @@ export default function ScannerPage() {
         </div>
       )}
 
-      {/* Selected network detail */}
-      {chosenNet && (
+      {/* Selected target detail */}
+      {target && (
         <div className="card border-green-500/20 bg-green-900/10 font-mono text-sm">
-          <p className="text-green-400 text-xs mb-2 tracking-widest">TARGET SELECCIONADO</p>
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-green-400 text-xs tracking-widest">TARGET SELECCIONADO</p>
+            <button
+              className="text-gray-500 hover:text-red-400 text-xs"
+              onClick={() => setTarget(null)}
+            >✕ Quitar</button>
+          </div>
           <div className="flex flex-wrap gap-6">
-            <div><span className="text-gray-500 text-xs">BSSID</span><br /><span className="text-cyan-400">{chosenNet.bssid}</span></div>
-            <div><span className="text-gray-500 text-xs">ESSID</span><br /><span className="text-white">{chosenNet.essid || '—'}</span></div>
-            <div><span className="text-gray-500 text-xs">CH</span><br /><span className="text-yellow-400">{chosenNet.channel}</span></div>
-            <div><span className="text-gray-500 text-xs">ENC</span><br /><span className="text-green-400">{chosenNet.security}</span></div>
-            <div><span className="text-gray-500 text-xs">CIPHER</span><br /><span className="text-gray-300">{chosenNet.cipher}</span></div>
-            <div><span className="text-gray-500 text-xs">AUTH</span><br /><span className="text-gray-300">{chosenNet.authentication}</span></div>
-            <div><span className="text-gray-500 text-xs">PWR</span><br /><span className="text-orange-400">{chosenNet.power} dBm</span></div>
+            <div><span className="text-gray-500 text-xs">BSSID</span><br /><span className="text-cyan-400">{target.bssid}</span></div>
+            <div><span className="text-gray-500 text-xs">ESSID</span><br /><span className="text-white">{target.essid || '—'}</span></div>
+            <div><span className="text-gray-500 text-xs">CH</span><br /><span className="text-yellow-400">{target.channel}</span></div>
+            <div><span className="text-gray-500 text-xs">ENC</span><br /><span className="text-green-400">{target.security}</span></div>
+            <div><span className="text-gray-500 text-xs">CIPHER</span><br /><span className="text-gray-300">{target.cipher}</span></div>
+            <div><span className="text-gray-500 text-xs">AUTH</span><br /><span className="text-gray-300">{target.authentication}</span></div>
+            <div><span className="text-gray-500 text-xs">PWR</span><br /><span className="text-orange-400">{target.power} dBm</span></div>
           </div>
         </div>
       )}
@@ -223,8 +231,8 @@ export default function ScannerPage() {
         </div>
         <NetworkTable
           networks={networks}
-          onSelect={setChosenNet}
-          selectedBssid={chosenNet?.bssid}
+          onSelect={setTarget}
+          selectedBssid={target?.bssid}
         />
       </div>
     </div>
