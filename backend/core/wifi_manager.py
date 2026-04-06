@@ -87,18 +87,39 @@ class WiFiManager:
         run_command(["airmon-ng", "check", "kill"])
         rc, stdout, stderr = run_command(["airmon-ng", "start", iface])
         if rc == 0:
-            mon = f"{iface}mon"
+            # ── Detect actual monitor interface name ──────────────────
+            mon = None
+
+            # 1. airmon-ng renamed it: "enabled on [wlan0mon]" or "enabled on wlan0mon"
             for line in stdout.split("\n"):
-                if "monitor mode enabled on" in line.lower():
-                    m = re.search(r"on \[?([\w\d]+)\]?", line)
-                    if m:
+                if "monitor mode" in line.lower() and "enabled" in line.lower():
+                    m = re.search(r"on \[?([\w]+)\]?", line)
+                    if m and m.group(1) != iface:
                         mon = m.group(1)
-                    break
+                        break
+
+            # 2. RTL8821CU / WEXT drivers keep the same interface name in monitor mode
+            if not mon:
+                info = get_interface_info(iface)
+                if info.get("mode", "").lower() == "monitor":
+                    mon = iface
+
+            # 3. Check if a <iface>mon variant appeared (some nl80211 drivers)
+            if not mon:
+                all_ifaces = get_wireless_interfaces()
+                candidate = f"{iface}mon"
+                if any(i["name"] == candidate for i in all_ifaces):
+                    mon = candidate
+
+            # 4. Last resort — assume it kept the original name
+            if not mon:
+                mon = iface
+
             self.monitor_interface = mon
             self.current_interface = iface
             self._log(f"Modo monitor activo: {mon}")
-            return True, f"Modo monitor activado: {mon}"
-        err = f"Error: {stderr}"
+            return True, f"Modo monitor activado en: {mon}"
+        err = (stderr.strip() or stdout.strip() or "Error al activar modo monitor")
         self._log(err)
         return False, err
 

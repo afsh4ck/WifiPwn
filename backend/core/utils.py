@@ -61,37 +61,64 @@ def kill_process(proc: subprocess.Popen) -> bool:
 
 
 def get_wireless_interfaces() -> List[Dict]:
+    """Detect all wireless interfaces regardless of driver model (nl80211 + WEXT)."""
     interfaces = []
     seen: set = set()
 
-    # Method 1: iw dev — nl80211 drivers
+    # ── Method 1: iwconfig — universal, works for nl80211 AND WEXT/Realtek ──
+    # wireless interfaces appear in stdout; non-wireless go to stderr
+    try:
+        _, stdout, _ = run_command(["iwconfig"])
+        for line in stdout.split("\n"):
+            # Interface sections start at column 0 (no leading whitespace)
+            if line and not line[0].isspace() and line.strip():
+                name = line.split()[0]
+                if name and name not in seen:
+                    interfaces.append({"name": name, "type": "managed", "channel": "", "txpower": ""})
+                    seen.add(name)
+    except Exception:
+        pass
+
+    # ── Method 2: iw dev — nl80211: augments existing entries with channel/type ──
     try:
         rc, stdout, _ = run_command(["iw", "dev"])
         if rc == 0:
             cur: Dict = {}
             for line in stdout.split("\n"):
-                line = line.strip()
-                if line.startswith("Interface "):
-                    if cur:
-                        interfaces.append(cur)
-                        seen.add(cur["name"])
-                    cur = {"name": line.split()[1], "type": "managed", "channel": "", "txpower": ""}
-                elif line.startswith("type "):
-                    cur["type"] = line.split()[1]
-                elif line.startswith("channel "):
-                    cur["channel"] = line.split()[1]
-                elif line.startswith("txpower "):
-                    cur["txpower"] = line.split()[1]
-            if cur:
-                interfaces.append(cur)
-                seen.add(cur["name"])
+                ls = line.strip()
+                if ls.startswith("Interface "):
+                    if cur and "name" in cur:
+                        n = cur["name"]
+                        if n in seen:
+                            for iface in interfaces:
+                                if iface["name"] == n:
+                                    iface.update({k: v for k, v in cur.items() if v})
+                                    break
+                        else:
+                            interfaces.append(cur)
+                            seen.add(n)
+                    cur = {"name": ls.split()[1], "type": "managed", "channel": "", "txpower": ""}
+                elif cur:
+                    if ls.startswith("type "):    cur["type"] = ls.split()[1]
+                    elif ls.startswith("channel "): cur["channel"] = ls.split()[1]
+                    elif ls.startswith("txpower "): cur["txpower"] = ls.split()[1]
+            if cur and "name" in cur:
+                n = cur["name"]
+                if n in seen:
+                    for iface in interfaces:
+                        if iface["name"] == n:
+                            iface.update({k: v for k, v in cur.items() if v})
+                            break
+                else:
+                    interfaces.append(cur)
+                    seen.add(n)
     except Exception:
         pass
 
-    # Method 2: /proc/net/wireless — WEXT drivers (Realtek, Atheros WEXT, etc.)
+    # ── Method 3: /proc/net/wireless — WEXT fallback ──────────────────
     try:
         with open("/proc/net/wireless") as f:
-            for line in f.readlines()[2:]:  # first two lines are headers
+            for line in f.readlines()[2:]:
                 name = line.split(":")[0].strip()
                 if name and name not in seen:
                     interfaces.append({"name": name, "type": "managed", "channel": "", "txpower": ""})
@@ -99,7 +126,7 @@ def get_wireless_interfaces() -> List[Dict]:
     except Exception:
         pass
 
-    # Method 3: /sys/class/net sysfs — catch anything still missing
+    # ── Method 4: /sys/class/net sysfs — last resort ──────────────────
     try:
         for iface in os.listdir("/sys/class/net"):
             if iface not in seen and os.path.exists(f"/sys/class/net/{iface}/wireless"):
@@ -114,24 +141,26 @@ def get_wireless_interfaces() -> List[Dict]:
 def get_interface_info(interface: str) -> Dict:
     info = {"name": interface, "mac": "", "mode": "unknown", "state": "unknown", "chipset": ""}
     try:
-        # MAC address
+        # MAC from sysfs
         rc, stdout, _ = run_command(["cat", f"/sys/class/net/{interface}/address"])
         if rc == 0:
             info["mac"] = stdout.strip()
 
-        # Mode: try nl80211 first, then iwconfig for WEXT drivers
-        rc, stdout, _ = run_command(["iw", "dev", interface, "info"])
-        if rc == 0:
-            for line in stdout.split("\n"):
-                stripped = line.strip()
-                if stripped.startswith("type "):
-                    info["mode"] = stripped.split()[1].capitalize()
-        else:
-            rc2, out2, _ = run_command(["iwconfig", interface])
-            if rc2 == 0:
-                m = re.search(r"Mode:(\S+)", out2)
-                if m:
-                    info["mode"] = m.group(1).capitalize()
+        # Mode: iwconfig first (works for WEXT/Realtek AND nl80211)
+        rc2, out2, _ = run_command(["iwconfig", interface])
+        if rc2 == 0 and out2.strip():
+            m = re.search(r"Mode:(\S+)", out2)
+            if m:
+                info["mode"] = m.group(1).capitalize()
+
+        # If iwconfig didn't give us a mode, try iw dev (nl80211)
+        if info["mode"] == "unknown":
+            rc3, out3, _ = run_command(["iw", "dev", interface, "info"])
+            if rc3 == 0:
+                for line in out3.split("\n"):
+                    if line.strip().startswith("type "):
+                        info["mode"] = line.strip().split()[1].capitalize()
+                        break
 
         # Operstate
         rc, stdout, _ = run_command(["cat", f"/sys/class/net/{interface}/operstate"])
