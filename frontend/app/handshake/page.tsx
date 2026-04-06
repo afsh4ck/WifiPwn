@@ -60,7 +60,7 @@ export default function HandshakePage() {
   const handleStart = async () => {
     if (!bssid || !iface) return
     setError('')
-    setLines([])
+    setLines([`[*] Iniciando captura en ${iface} → BSSID: ${bssid} canal ${channel}`, `[*] Esperando handshake... Pulsa "Enviar deauth" para forzar la reconexión del cliente`])
     try {
       await startCapture(bssid, channel, iface)
       setCapturing(true)
@@ -70,14 +70,18 @@ export default function HandshakePage() {
   }
 
   const handleStop = async () => {
-    try { await stopCapture() } finally { setCapturing(false) }
+    try { await stopCapture() } finally {
+      setCapturing(false)
+      // Refresh handshake list in case one was captured
+      getHandshakes().then(setHandshakes).catch(console.error)
+    }
   }
 
   const handleDeauth = async () => {
     if (!bssid || !iface) return
     try {
-      await sendDeauth(bssid, iface, undefined, 64)
-      setLines(prev => [...prev, `[*] Enviando paquetes deauth a ${bssid}...`])
+      await sendDeauth(bssid, iface, undefined, 5)
+      setLines(prev => [...prev, `[*] Enviando 5 paquetes deauth a ${bssid}... (espera reconexión)`])
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : String(e))
     }

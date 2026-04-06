@@ -7,6 +7,7 @@ from core.wifi_manager import wifi_manager
 from core.database import db
 from core.utils import validate_bssid, validate_channel, check_handshake_in_cap
 from core.config import ConfigManager
+from api.websocket import handshake_detected_sync
 
 router = APIRouter()
 config = ConfigManager()
@@ -50,11 +51,13 @@ async def start_capture(req: CaptureRequest):
         out = str(config.get_capture_path(f"{name}_{ts}"))
 
     def on_hs(bssid: str):
+        # Emit WebSocket event immediately
+        handshake_detected_sync(bssid)
+        # Persist to DB
         net = db.get_network_by_bssid(bssid)
         if net:
             db.add_handshake(net["id"], out + "-01.cap")
-            db.log_action("Handshake capturado", f"BSSID: {bssid}")
-
+        db.log_action("Handshake capturado", f"BSSID: {bssid}")
     ok = wifi_manager.start_capture(req.bssid, req.channel, out, iface, on_hs)
     if not ok:
         # If a stale capture is blocking, stop it and retry once

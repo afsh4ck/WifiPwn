@@ -11,7 +11,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from api.websocket import router as ws_router, manager, log_sync, scan_update_sync, command_output_sync, init_event_loop
+from api.websocket import router as ws_router, manager, log_sync, scan_update_sync, command_output_sync, handshake_detected_sync, init_event_loop
 from api.routes import dashboard, interfaces, scanner, handshake, cracking, deauth, evil_portal, campaigns
 from core.wifi_manager import wifi_manager
 from core.command_runner import command_manager
@@ -27,7 +27,10 @@ async def lifespan(app: FastAPI):
     # Conectar callbacks del wifi_manager al WebSocket
     wifi_manager.on_log(lambda msg: log_sync(msg, "info", "wifi"))
     wifi_manager.on_scan_update(lambda nets: scan_update_sync(nets))
-    wifi_manager.on_handshake(lambda bssid: log_sync(f"HANDSHAKE: {bssid}", "success", "capture"))
+    wifi_manager.on_handshake(lambda bssid: (
+        handshake_detected_sync(bssid),
+        log_sync(f"HANDSHAKE capturado: {bssid}", "success", "capture"),
+    ))
 
     # Streaming de output de comandos al WebSocket
     command_manager.subscribe_global(lambda cid, line: command_output_sync(cid, line))

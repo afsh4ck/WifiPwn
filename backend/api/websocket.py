@@ -144,6 +144,13 @@ def scan_update_sync(networks: list):
     })
 
 
+def handshake_detected_sync(bssid: str):
+    broadcast_sync({
+        "type": "handshake_detected",
+        "timestamp": datetime.now().isoformat(),
+        "data": {"bssid": bssid},
+    })
+
 @router.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     await manager.connect(websocket)

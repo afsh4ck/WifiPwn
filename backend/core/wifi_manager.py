@@ -42,7 +42,8 @@ class WiFiManager:
         self._networks:  List[Dict] = []
         self._log_cbs:   List[Callable] = []
         self._scan_cbs:  List[Callable] = []
-        self._hs_cbs:    List[Callable] = []
+        self._hs_cbs:    List[Callable] = []  # permanent global callbacks (registered at startup)
+        self._capture_cb: Optional[Callable] = None  # per-capture callback (reset each session)
         self._initialized = True
 
     # ------------------------------------------------------------------
@@ -64,8 +65,13 @@ class WiFiManager:
             except Exception: pass
 
     def _emit_handshake(self, bssid: str):
+        # Global permanent callbacks (registered at startup)
         for cb in self._hs_cbs:
             try: cb(bssid)
+            except Exception: pass
+        # Per-capture callback (set each session, cleared on stop)
+        if self._capture_cb:
+            try: self._capture_cb(bssid)
             except Exception: pass
 
     # ------------------------------------------------------------------
@@ -263,8 +269,8 @@ class WiFiManager:
             return False
 
         self._capturing = True
-        if on_handshake:
-            self._hs_cbs.append(on_handshake)
+        # Replace per-capture callback (avoids list growing across sessions)
+        self._capture_cb = on_handshake
 
         try:
             self._capture_process = subprocess.Popen(
@@ -301,6 +307,7 @@ class WiFiManager:
 
     def stop_capture(self) -> bool:
         self._capturing = False
+        self._capture_cb = None
         if self._capture_process:
             kill_process(self._capture_process)
             self._capture_process = None
@@ -312,10 +319,13 @@ class WiFiManager:
     # ------------------------------------------------------------------
 
     def send_deauth(self, bssid: str, client: str = None,
-                    packets: int = 10, iface: str = None) -> bool:
+                    packets: int = 5, iface: str = None) -> bool:
         iface = iface or self.monitor_interface
         if not iface:
             return False
+        # Kill any running deauth first
+        if self._deauth_process and self._deauth_process.poll() is None:
+            kill_process(self._deauth_process)
         cmd = ["aireplay-ng", "-0", str(packets), "-a", bssid]
         if client:
             cmd.extend(["-c", client])
