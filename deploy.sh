@@ -90,14 +90,30 @@ fi
 
 # Crear directorios de datos si no existen
 echo "[*] Creando directorios de datos..."
-mkdir -p /app/data
-mkdir -p /app/captures
-mkdir -p /app/reports
-mkdir -p /app/logs
-mkdir -p /app/templates
+
+if [ "$IN_DOCKER" = true ]; then
+    DATA_DIR="/app/data"
+    CAPTURES_DIR="/app/captures"
+    REPORTS_DIR="/app/reports"
+    LOGS_DIR="/app/logs"
+    TEMPLATES_DIR="/app/templates"
+else
+    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    DATA_DIR="$SCRIPT_DIR/data"
+    CAPTURES_DIR="$SCRIPT_DIR/captures"
+    REPORTS_DIR="$SCRIPT_DIR/reports"
+    LOGS_DIR="$SCRIPT_DIR/logs"
+    TEMPLATES_DIR="$SCRIPT_DIR/templates"
+fi
+
+mkdir -p "$DATA_DIR"
+mkdir -p "$CAPTURES_DIR"
+mkdir -p "$REPORTS_DIR"
+mkdir -p "$LOGS_DIR"
+mkdir -p "$TEMPLATES_DIR"
 
 # Inicializar base de datos si no existe
-DB_PATH="/app/data/wifipwn.db"
+DB_PATH="$DATA_DIR/wifipwn.db"
 if [ ! -f "$DB_PATH" ]; then
     echo "[*] Inicializando base de datos en $DB_PATH..."
     sqlite3 "$DB_PATH" <<EOF
@@ -207,7 +223,23 @@ echo "      Iniciando WifiPwn GUI"
 echo "========================================="
 echo ""
 
-cd /app/wifipwn
-
-# Ejecutar con Python
-exec python3 main.py "$@"
+# Detectar si estamos en Docker o en host
+if [ "$IN_DOCKER" = true ]; then
+    # Estamos en Docker, usar ruta /app/wifipwn
+    APP_DIR="/app/wifipwn"
+    cd "$APP_DIR"
+    exec python3 main.py "$@"
+else
+    # Estamos en el host, usar ruta relativa
+    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    APP_DIR="$SCRIPT_DIR/wifipwn"
+    
+    if [ ! -d "$APP_DIR" ]; then
+        echo "[!] Error: No se encuentra el directorio wifipwn en $SCRIPT_DIR"
+        echo "[*] Asegurate de ejecutar este script desde el directorio raiz del proyecto"
+        exit 1
+    fi
+    
+    cd "$APP_DIR"
+    exec sudo python3 main.py "$@"
+fi

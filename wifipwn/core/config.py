@@ -13,37 +13,45 @@ from typing import Any, Dict, Optional
 class ConfigManager:
     """Gestor de configuracion de la aplicacion"""
     
-    DEFAULT_CONFIG = {
-        "theme": "dark",
-        "language": "es",
-        "capture_directory": "/home/user/WiFiAudit/captures",
-        "reports_directory": "/home/user/WiFiAudit/reports",
-        "logs_directory": "/home/user/WiFiAudit/logs",
-        "default_wordlist": "/usr/share/wordlists/rockyou.txt",
-        "default_interface": "",
-        "auto_save_captures": True,
-        "confirm_dangerous_actions": True,
-        "scan_timeout": 60,
-        "deauth_packets": 10,
-        "deauth_delay": 1,
-        "evil_portal_templates_dir": "templates",
-        "recent_campaigns": [],
-        "max_recent_campaigns": 10,
-        "window_geometry": {
-            "x": 100,
-            "y": 100,
-            "width": 1400,
-            "height": 900
-        }
-    }
-    
     def __init__(self, config_file: Optional[str] = None):
-        """
-        Inicializa el gestor de configuracion
+        # Detectar si estamos en Docker
+        in_docker = os.path.exists('/.dockerenv')
         
-        Args:
-            config_file: Ruta al archivo de configuracion. Si es None, usa la ruta por defecto.
-        """
+        if in_docker:
+            default_capture = "/app/captures"
+            default_reports = "/app/reports"
+            default_logs = "/app/logs"
+        else:
+            # En el host, usar directorio del proyecto
+            project_dir = Path(__file__).parent.parent.parent
+            default_capture = str(project_dir / "captures")
+            default_reports = str(project_dir / "reports")
+            default_logs = str(project_dir / "logs")
+        
+        self.DEFAULT_CONFIG = {
+            "theme": "dark",
+            "language": "es",
+            "capture_directory": default_capture,
+            "reports_directory": default_reports,
+            "logs_directory": default_logs,
+            "default_wordlist": "/usr/share/wordlists/rockyou.txt",
+            "default_interface": "",
+            "auto_save_captures": True,
+            "confirm_dangerous_actions": True,
+            "scan_timeout": 60,
+            "deauth_packets": 10,
+            "deauth_delay": 1,
+            "evil_portal_templates_dir": "templates",
+            "recent_campaigns": [],
+            "max_recent_campaigns": 10,
+            "window_geometry": {
+                "x": 100,
+                "y": 100,
+                "width": 1400,
+                "height": 900
+            }
+        }
+        
         if config_file is None:
             # Directorio de configuracion en home del usuario
             config_dir = Path.home() / ".config" / "wifipwn"

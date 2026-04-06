@@ -6,6 +6,7 @@ Gestiona el almacenamiento persistente de datos
 
 import sqlite3
 import json
+import os
 import threading
 from datetime import datetime
 from typing import List, Dict, Optional, Tuple, Any
@@ -25,7 +26,7 @@ class DatabaseManager(QObject):
     _instance = None
     _lock = threading.Lock()
     
-    def __new__(cls, db_path: str = "/app/data/wifipwn.db"):
+    def __new__(cls, db_path: str = None):
         if cls._instance is None:
             with cls._lock:
                 if cls._instance is None:
@@ -33,11 +34,23 @@ class DatabaseManager(QObject):
                     cls._instance._initialized = False
         return cls._instance
     
-    def __init__(self, db_path: str = "/app/data/wifipwn.db"):
+    def __init__(self, db_path: str = None):
         if self._initialized:
             return
             
         super().__init__()
+        
+        # Detectar si estamos en Docker
+        in_docker = os.path.exists('/.dockerenv')
+        
+        if db_path is None:
+            if in_docker:
+                db_path = "/app/data/wifipwn.db"
+            else:
+                # En el host, usar ruta relativa al script
+                script_dir = Path(__file__).parent.parent.parent
+                db_path = str(script_dir / "data" / "wifipwn.db")
+        
         self.db_path = Path(db_path)
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
         self._local = threading.local()
