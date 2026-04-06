@@ -1,4 +1,4 @@
-# WifiPwn â€” Herramienta de Pentesting WiFi
+# WifiPwn — Herramienta de Pentesting WiFi
 
 ```
  _       __ ____ ______ ____ ____  _       __ _   __ 
@@ -30,22 +30,22 @@ WifiPwn es una plataforma completa de auditoría WiFi con una interfaz web moder
 ## Arquitectura
 
 ```
-â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
-â”‚                     Cliente (Navegador)                  â”‚
-â”‚              Next.js 14 â†’ http://localhost:3000          â”‚
-â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¬â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
-                       â”‚ HTTP /api/* + WebSocket /ws
-â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â–¼â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
-â”‚                  FastAPI Backend                          â”‚
-â”‚              Python â†’ http://localhost:8000              â”‚
-â”‚   /api/dashboard  /api/scanner  /api/handshake  ...     â”‚
-â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¬â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
-                       â”‚ subprocess / threads
-â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â–¼â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
-â”‚         Herramientas del sistema (Kali Linux)            â”‚
-â”‚   aircrack-ng  airodump-ng  aireplay-ng  airmon-ng      â”‚
-â”‚   hostapd  dnsmasq  iw  macchanger                      â”‚
-â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
++----------------------------------------------------------+
+|                   Cliente (Navegador)                    |
+|            Next.js 14  ->  http://localhost:1234         |
++-------------------------+--------------------------------+
+                          |  HTTP /api/* + WebSocket /ws
++-------------------------v--------------------------------+
+|                    FastAPI Backend                       |
+|              Python  ->  http://localhost:8000           |
+|   /api/dashboard  /api/scanner  /api/handshake  ...     |
++-------------------------+--------------------------------+
+                          |  subprocess / threads
++-------------------------v--------------------------------+
+|          Herramientas del sistema (Kali Linux)           |
+|   aircrack-ng  airodump-ng  aireplay-ng  airmon-ng      |
+|   hostapd  dnsmasq  iw  macchanger                      |
++----------------------------------------------------------+
 ```
 
 **Comunicación en tiempo real:** Las páginas de escaneo, cracking y handshake reciben actualizaciones instantáneas vía WebSocket (`ws://localhost:8000/ws`) sin necesidad de refrescar la página.
@@ -85,7 +85,7 @@ sudo apt update && sudo apt install -y \
     npm
 ```
 
-### Despliegue automático (modo web)
+### Despliegue automático
 
 El script `deploy.sh` instala dependencias, construye el frontend y lanza ambos servicios:
 
@@ -95,7 +95,7 @@ sudo bash deploy.sh
 ```
 
 Una vez en marcha:
-- **Interfaz web**: http://localhost:3000
+- **Interfaz web**: http://localhost:1234
 - **API REST + Docs**: http://localhost:8000/docs
 
 Para detener, presiona `Ctrl+C`. El script limpia todos los procesos automáticamente.
@@ -118,20 +118,9 @@ sudo python3 -m uvicorn main:app --host 0.0.0.0 --port 8000
 cd frontend
 npm install
 npm run build
-npm start        # producción en puerto 3000
+npm start        # producción en puerto 1234
 # o:
 npm run dev      # desarrollo con hot-reload
-```
-
----
-
-### Modo legacy (GUI PyQt5)
-
-Si prefieres la interfaz gráfica original PyQt5:
-
-```bash
-# Requiere entorno gráfico (X11)
-sudo bash deploy.sh --legacy
 ```
 
 ---
@@ -166,31 +155,31 @@ docker-compose down
 ### 1. Capturar y crackear un handshake
 
 ```
-1. Interfaces â†’ Activar modo monitor en wlan0
+1. Interfaces -> Activar modo monitor en wlan0
 
-2. Escáner â†’ Seleccionar wlan0mon â†’ Iniciar escaneo
+2. Escáner -> Seleccionar wlan0mon -> Iniciar escaneo
    Las redes aparecen en tiempo real
 
-3. Handshake â†’ Seleccionar BSSID/canal â†’ Iniciar captura
-   â†’ "Enviar deauth" para forzar reconexión
-   â†’ Esperar "HANDSHAKE CAPTURADO" âœ“
+3. Handshake -> Seleccionar BSSID/canal -> Iniciar captura
+   -> "Enviar deauth" para forzar reconexión
+   -> Esperar "HANDSHAKE CAPTURADO" [OK]
 
-4. Cracking â†’ Seleccionar el .cap â†’ Elegir wordlist
-   â†’ Output en streaming en el terminal web
+4. Cracking -> Seleccionar el .cap -> Elegir wordlist
+   -> Output en streaming en el terminal web
 
-5. Dashboard â†’ Verificar estadísticas actualizadas
+5. Dashboard -> Verificar estadísticas actualizadas
 ```
 
 ### 2. Evil Portal (Rogue AP)
 
 ```
-1. Evil Portal â†’ Configurar SSID, canal e interfaz
+1. Evil Portal -> Configurar SSID, canal e interfaz
 
-2. Iniciar portal â†’ hostapd + dnsmasq se inician
+2. Iniciar portal -> hostapd + dnsmasq se inician
 
 3. Las credenciales aparecen en tiempo real vía WebSocket
 
-4. Detener portal â†’ Exportar credenciales
+4. Detener portal -> Exportar credenciales
 ```
 
 ---
@@ -199,52 +188,50 @@ docker-compose down
 
 ```
 WifiPwn/
-â”œâ”€â”€ backend/                    # API FastAPI (Python)
-â”‚   â”œâ”€â”€ main.py                 # Punto de entrada FastAPI
-â”‚   â”œâ”€â”€ requirements.txt
-â”‚   â”œâ”€â”€ core/
-â”‚   â”‚   â”œâ”€â”€ command_runner.py   # Ejecutor de comandos con threads
-â”‚   â”‚   â”œâ”€â”€ database.py         # SQLite
-â”‚   â”‚   â”œâ”€â”€ wifi_manager.py     # Operaciones WiFi
-â”‚   â”‚   â”œâ”€â”€ config.py
-â”‚   â”‚   â””â”€â”€ utils.py
-â”‚   â””â”€â”€ api/
-â”‚       â”œâ”€â”€ websocket.py        # Gestor WebSocket con broadcast
-â”‚       â””â”€â”€ routes/
-â”‚           â”œâ”€â”€ dashboard.py
-â”‚           â”œâ”€â”€ interfaces.py
-â”‚           â”œâ”€â”€ scanner.py
-â”‚           â”œâ”€â”€ handshake.py
-â”‚           â”œâ”€â”€ cracking.py
-â”‚           â”œâ”€â”€ deauth.py
-â”‚           â”œâ”€â”€ evil_portal.py
-â”‚           â””â”€â”€ campaigns.py
-â”‚
-â”œâ”€â”€ frontend/                   # UI Next.js 14 (TypeScript)
-â”‚   â”œâ”€â”€ app/                    # App Router
-â”‚   â”‚   â”œâ”€â”€ layout.tsx
-â”‚   â”‚   â”œâ”€â”€ page.tsx            # Dashboard
-â”‚   â”‚   â”œâ”€â”€ interfaces/page.tsx
-â”‚   â”‚   â”œâ”€â”€ scanner/page.tsx
-â”‚   â”‚   â”œâ”€â”€ handshake/page.tsx
-â”‚   â”‚   â”œâ”€â”€ cracking/page.tsx
-â”‚   â”‚   â”œâ”€â”€ deauth/page.tsx
-â”‚   â”‚   â”œâ”€â”€ evil-portal/page.tsx
-â”‚   â”‚   â””â”€â”€ campaigns/page.tsx
-â”‚   â”œâ”€â”€ components/
-â”‚   â”‚   â”œâ”€â”€ layout/             # Sidebar, Header
-â”‚   â”‚   â””â”€â”€ ui/                 # Terminal, StatsCard, Badge, NetworkTable
-â”‚   â”œâ”€â”€ lib/
-â”‚   â”‚   â”œâ”€â”€ api.ts              # Cliente REST tipado
-â”‚   â”‚   â””â”€â”€ websocket.ts        # Hook useWebSocket con reconexión auto
-â”‚   â””â”€â”€ types/index.ts          # Interfaces TypeScript
-â”‚
-â”œâ”€â”€ wifipwn/                    # GUI PyQt5 (legacy)
-â”‚
-â”œâ”€â”€ deploy.sh                   # Script principal (web + --legacy)
-â”œâ”€â”€ run.sh                      # Wrapper Docker
-â”œâ”€â”€ docker-compose.yml
-â””â”€â”€ Dockerfile
++-- backend/                    # API FastAPI (Python)
+|   +-- main.py                 # Punto de entrada FastAPI
+|   +-- requirements.txt
+|   +-- core/
+|   |   +-- command_runner.py   # Ejecutor de comandos con threads
+|   |   +-- database.py         # SQLite
+|   |   +-- wifi_manager.py     # Operaciones WiFi
+|   |   +-- config.py
+|   |   +-- utils.py
+|   +-- api/
+|       +-- websocket.py        # Gestor WebSocket con broadcast
+|       +-- routes/
+|           +-- dashboard.py
+|           +-- interfaces.py
+|           +-- scanner.py
+|           +-- handshake.py
+|           +-- cracking.py
+|           +-- deauth.py
+|           +-- evil_portal.py
+|           +-- campaigns.py
+|
++-- frontend/                   # UI Next.js 14 (TypeScript)
+|   +-- app/                    # App Router
+|   |   +-- layout.tsx
+|   |   +-- page.tsx            # Dashboard
+|   |   +-- interfaces/page.tsx
+|   |   +-- scanner/page.tsx
+|   |   +-- handshake/page.tsx
+|   |   +-- cracking/page.tsx
+|   |   +-- deauth/page.tsx
+|   |   +-- evil-portal/page.tsx
+|   |   +-- campaigns/page.tsx
+|   +-- components/
+|   |   +-- layout/             # Sidebar, Header
+|   |   +-- ui/                 # Terminal, StatsCard, Badge, NetworkTable
+|   +-- lib/
+|   |   +-- api.ts              # Cliente REST tipado
+|   |   +-- websocket.ts        # Hook useWebSocket con reconexión auto
+|   +-- types/index.ts          # Interfaces TypeScript
+|
++-- deploy.sh                   # Script de arranque
++-- run.sh                      # Wrapper Docker
++-- docker-compose.yml
++-- Dockerfile
 ```
 
 ---
@@ -314,11 +301,11 @@ El backend requiere **permisos de root** para interactuar con interfaces WiFi. U
 
 ## Aviso Legal
 
-**âš ï¸ USO EXCLUSIVO EN ENTORNOS AUTORIZADOS**
-
-Esta herramienta está diseñada para auditorías de seguridad WiFi autorizadas y fines educativos. El uso en redes sin permiso explícito del propietario es **ilegal** y puede conllevar responsabilidades penales.
-
-El autor **no se responsabiliza** del uso indebido. El usuario asume toda la responsabilidad legal.
+> **ADVERTENCIA: USO EXCLUSIVO EN ENTORNOS AUTORIZADOS**
+>
+> Esta herramienta está diseñada para auditorías de seguridad WiFi autorizadas y fines educativos. El uso en redes sin permiso explícito del propietario es **ilegal** y puede conllevar responsabilidades penales.
+>
+> El autor **no se responsabiliza** del uso indebido. El usuario asume toda la responsabilidad legal.
 
 ---
 

@@ -1,0 +1,112 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600;700&display=swap');
+
+/* ── Base ─────────────────────────────────────────────────────── */
+:root {
+  --color-bg:      #0a0e1a;
+  --color-surface: #0d1526;
+  --color-card:    #111827;
+  --color-border:  #1f2d45;
+  --color-accent:  #00d4ff;
+  --color-success: #00ff88;
+  --color-warning: #ffaa00;
+  --color-danger:  #ff4455;
+  --color-purple:  #a78bfa;
+  --color-muted:   #64748b;
+  --color-text:    #e2e8f0;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Scrollbar ────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #1f2d45; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #2a3f60; }
+
+/* ── Grid background ──────────────────────────────────────────── */
+.bg-grid-overlay {
+  background-image:
+    linear-gradient(rgba(0,212,255,.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,212,255,.03) 1px, transparent 1px);
+  background-size: 50px 50px;
+}
+
+/* ── Glow effects ─────────────────────────────────────────────── */
+.glow-accent  { box-shadow: 0 0 20px rgba(0, 212, 255, 0.3); }
+.glow-success { box-shadow: 0 0 20px rgba(0, 255, 136, 0.3); }
+.glow-danger  { box-shadow: 0 0 20px rgba(255, 68, 85, 0.3);  }
+
+/* ── Scan animation ───────────────────────────────────────────── */
+@keyframes scanline {
+  0%   { transform: translateY(-100%); opacity: 0.5; }
+  100% { transform: translateY(400%);  opacity: 0; }
+}
+.animate-scanline {
+  animation: scanline 3s linear infinite;
+}
+
+/* ── Blinking cursor ──────────────────────────────────────────── */
+@keyframes blink { 50% { opacity: 0; } }
+.cursor-blink { animation: blink 1s step-end infinite; }
+
+/* ── Form inputs ──────────────────────────────────────────────── */
+.input {
+  @apply w-full bg-surface border border-border/60 rounded-lg px-3 py-2 text-sm text-text
+         placeholder:text-muted focus:outline-none focus:border-accent/60 focus:ring-1 focus:ring-accent/20
+         transition-colors font-mono;
+}
+
+.btn {
+  @apply inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium
+         transition-all duration-150 disabled:opacity-40 disabled:cursor-not-allowed;
+}
+
+.btn-primary {
+  @apply btn bg-accent/10 text-accent border border-accent/30
+         hover:bg-accent/20 hover:border-accent/60 hover:shadow-[0_0_15px_rgba(0,212,255,0.3)];
+}
+
+.btn-danger {
+  @apply btn bg-danger/10 text-danger border border-danger/30
+         hover:bg-danger/20 hover:border-danger/60 hover:shadow-[0_0_15px_rgba(255,68,85,0.3)];
+}
+
+.btn-success {
+  @apply btn bg-success/10 text-success border border-success/30
+         hover:bg-success/20 hover:border-success/60;
+}
+
+.btn-ghost {
+  @apply btn text-muted border border-border/60 hover:text-text hover:border-accent/30;
+}
+
+/* ── Card ─────────────────────────────────────────────────────── */
+.card {
+  @apply bg-card border border-border/60 rounded-xl p-5;
+}
+
+/* ── Section header ───────────────────────────────────────────── */
+.section-title {
+  @apply text-xs font-semibold text-muted uppercase tracking-widest mb-4;
+}

@@ -210,36 +210,88 @@ for tool in $TOOLS; do
     fi
 done
 
-# Configurar X11 si está disponible
-if [ -n "$DISPLAY" ]; then
-    echo "[*] Display X11 detectado: $DISPLAY"
-    xhost +local:docker 2>/dev/null || true
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+
+# ── WEB MODE: FastAPI backend + Next.js frontend ──────────────────────
+echo ""
+echo "========================================="
+echo "   Iniciando WifiPwn Web (API + Next.js)"
+echo "========================================="
+echo ""
+
+BACKEND_DIR="$SCRIPT_DIR/backend"
+FRONTEND_DIR="$SCRIPT_DIR/frontend"
+
+# Check backend dir
+if [ ! -d "$BACKEND_DIR" ]; then
+    echo "[!] No se encuentra $BACKEND_DIR"
+    exit 1
 fi
 
-# Iniciar la aplicación
-echo ""
-echo "========================================="
-echo "      Iniciando WifiPwn GUI"
-echo "========================================="
-echo ""
+# Install Python backend deps
+echo "[*] Instalando dependencias Python del backend..."
+pip3 install -q -r "$BACKEND_DIR/requirements.txt"
 
-# Detectar si estamos en Docker o en host
-if [ "$IN_DOCKER" = true ]; then
-    # Estamos en Docker, usar ruta /app/wifipwn
-    APP_DIR="/app/wifipwn"
-    cd "$APP_DIR"
-    exec python3 main.py "$@"
-else
-    # Estamos en el host, usar ruta relativa
-    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-    APP_DIR="$SCRIPT_DIR/wifipwn"
-    
-    if [ ! -d "$APP_DIR" ]; then
-        echo "[!] Error: No se encuentra el directorio wifipwn en $SCRIPT_DIR"
-        echo "[*] Asegurate de ejecutar este script desde el directorio raiz del proyecto"
+# Install Node.js frontend deps
+if [ -d "$FRONTEND_DIR" ]; then
+    echo "[*] Instalando dependencias Node.js del frontend..."
+    cd "$FRONTEND_DIR"
+    if ! command -v npm &>/dev/null; then
+        echo "[!] npm no encontrado. Instala Node.js >= 18"
+        echo "    curl -fsSL https://deb.nodesource.com/setup_20.x | bash -"
+        echo "    apt-get install -y nodejs"
         exit 1
     fi
-    
-    cd "$APP_DIR"
-    exec sudo python3 main.py "$@"
+    npm install --silent
+    echo "[*] Construyendo frontend Next.js..."
+    npm run build
+    cd "$SCRIPT_DIR"
 fi
+
+# Cleanup on exit
+cleanup() {
+    echo ""
+    echo "[*] Deteniendo servicios..."
+    kill "$BACKEND_PID" 2>/dev/null || true
+    kill "$FRONTEND_PID" 2>/dev/null || true
+    wait
+    echo "[+] WifiPwn detenido"
+}
+trap cleanup EXIT INT TERM
+
+# Start FastAPI backend
+echo "[*] Iniciando API backend (puerto 8000)..."
+cd "$BACKEND_DIR"
+sudo python3 -m uvicorn main:app --host 0.0.0.0 --port 8000 --log-level info &
+BACKEND_PID=$!
+
+# Wait for backend to be ready
+sleep 3
+if ! kill -0 "$BACKEND_PID" 2>/dev/null; then
+    echo "[!] Error: el backend no pudo iniciarse"
+    exit 1
+fi
+echo "[+] Backend API listo en http://localhost:8000"
+
+# Start Next.js frontend
+if [ -d "$FRONTEND_DIR" ]; then
+    echo "[*] Iniciando frontend Next.js (puerto 1234)..."
+    cd "$FRONTEND_DIR"
+    npm start &
+    FRONTEND_PID=$!
+    sleep 2
+    echo "[+] Frontend listo en http://localhost:1234"
+fi
+
+echo ""
+echo "========================================="
+echo "  WifiPwn Web Interface"
+echo "  => http://localhost:1234"
+echo "  => API: http://localhost:8000/docs"
+echo "========================================="
+echo ""
+echo "Presiona Ctrl+C para detener todos los servicios"
+echo ""
+
+wait
