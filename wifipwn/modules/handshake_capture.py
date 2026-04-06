@@ -3,6 +3,7 @@
 WifiPwn - Captura de Handshake
 """
 
+from datetime import datetime
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
     QGroupBox, QMessageBox, QLineEdit, QSpinBox, QFileDialog,
@@ -13,6 +14,8 @@ from PyQt5.QtGui import QFont
 
 from core.wifi_manager import WiFiManager
 from core.config import ConfigManager
+from core.database import DatabaseManager
+from core.command_runner import CommandRunner
 from core.utils import validate_bssid, validate_channel, check_handshake_in_cap
 
 
@@ -22,10 +25,13 @@ class HandshakeCapture(QWidget):
     log_signal = pyqtSignal(str)
     handshake_captured = pyqtSignal(str)
     
-    def __init__(self, wifi_manager: WiFiManager, config: ConfigManager):
+    def __init__(self, wifi_manager: WiFiManager, config: ConfigManager,
+                 db: DatabaseManager = None, command_runner: CommandRunner = None):
         super().__init__()
         self.wifi_manager = wifi_manager
         self.config = config
+        self.db = db
+        self.command_runner = command_runner
         self.is_capturing = False
         self.output_file = None
         
@@ -227,7 +233,8 @@ class HandshakeCapture(QWidget):
             
             if success:
                 self.log_signal.emit(f"Captura iniciada para {bssid}")
-                self.capture_log.append(f"[{datetime.now().strftime("%H:%M:%S")}] Captura iniciada")
+                timestamp = datetime.now().strftime('%H:%M:%S')
+                self.capture_log.append(f"[{timestamp}] Captura iniciada")
                 self.capture_log.append(f"BSSID: {bssid}")
                 self.capture_log.append(f"Canal: {channel}")
                 self.capture_log.append(f"Archivo: {output_file}")

@@ -16,6 +16,7 @@ from PyQt5.QtGui import QFont
 
 from core.wifi_manager import WiFiManager
 from core.config import ConfigManager
+from core.database import DatabaseManager
 
 
 class EvilPortalPanel(QWidget):
@@ -24,10 +25,12 @@ class EvilPortalPanel(QWidget):
     log_signal = pyqtSignal(str)
     credential_captured = pyqtSignal(str, str)  # usuario, password
     
-    def __init__(self, wifi_manager: WiFiManager, config: ConfigManager):
+    def __init__(self, wifi_manager: WiFiManager, config: ConfigManager,
+                 db: DatabaseManager = None):
         super().__init__()
         self.wifi_manager = wifi_manager
         self.config = config
+        self.db = db
         self.is_running = False
         self.hostapd_process = None
         self.dnsmasq_process = None

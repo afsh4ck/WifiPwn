@@ -13,6 +13,8 @@ from PyQt5.QtGui import QFont, QColor
 
 from core.wifi_manager import WiFiManager
 from core.config import ConfigManager
+from core.database import DatabaseManager
+from core.command_runner import CommandRunner
 
 
 class NetworkScanner(QWidget):
@@ -21,10 +23,13 @@ class NetworkScanner(QWidget):
     log_signal = pyqtSignal(str)
     network_selected = pyqtSignal(dict)  # Emite la red seleccionada
     
-    def __init__(self, wifi_manager: WiFiManager, config: ConfigManager):
+    def __init__(self, wifi_manager: WiFiManager, config: ConfigManager,
+                 db: DatabaseManager = None, command_runner: CommandRunner = None):
         super().__init__()
         self.wifi_manager = wifi_manager
         self.config = config
+        self.db = db
+        self.command_runner = command_runner
         self.is_scanning = False
         self.networks = []
         self.selected_network = None

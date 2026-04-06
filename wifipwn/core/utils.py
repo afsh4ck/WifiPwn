@@ -21,6 +21,17 @@ def check_root_privileges() -> bool:
     return os.geteuid() == 0 if hasattr(os, 'geteuid') else False
 
 
+def check_required_tools() -> List[str]:
+    """
+    Verifica las herramientas requeridas y retorna las faltantes
+    
+    Returns:
+        Lista de herramientas faltantes
+    """
+    checker = ToolChecker()
+    return checker.check_all_tools()
+
+
 def validate_bssid(bssid: str) -> bool:
     """
     Valida el formato de una direccion MAC (BSSID)

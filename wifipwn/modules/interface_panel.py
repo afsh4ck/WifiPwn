@@ -13,6 +13,8 @@ from PyQt5.QtGui import QFont
 
 from core.wifi_manager import WiFiManager
 from core.config import ConfigManager
+from core.database import DatabaseManager
+from core.command_runner import CommandRunner
 
 
 class InterfacePanel(QWidget):
@@ -20,10 +22,13 @@ class InterfacePanel(QWidget):
     
     log_signal = pyqtSignal(str)
     
-    def __init__(self, wifi_manager: WiFiManager, config: ConfigManager):
+    def __init__(self, wifi_manager: WiFiManager, config: ConfigManager,
+                 db: DatabaseManager = None, command_runner: CommandRunner = None):
         super().__init__()
         self.wifi_manager = wifi_manager
         self.config = config
+        self.db = db
+        self.command_runner = command_runner
         self.selected_interface = None
         
         self.init_ui()

@@ -16,6 +16,7 @@ from PyQt5.QtCore import Qt, pyqtSignal
 from PyQt5.QtGui import QFont
 
 from core.config import ConfigManager
+from core.database import DatabaseManager
 
 
 class AuditCampaignPanel(QWidget):
@@ -23,9 +24,10 @@ class AuditCampaignPanel(QWidget):
     
     log_signal = pyqtSignal(str)
     
-    def __init__(self, config: ConfigManager):
+    def __init__(self, config: ConfigManager, db: DatabaseManager = None):
         super().__init__()
         self.config = config
+        self.db = db
         self.current_campaign = None
         self.campaigns = []
         
