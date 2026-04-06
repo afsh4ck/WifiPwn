@@ -3,6 +3,7 @@
 WifiPwn - WiFi Manager (sin PyQt5)
 """
 
+import logging
 import os
 import re
 import subprocess
@@ -12,6 +13,8 @@ from pathlib import Path
 from typing import Callable, Dict, List, Optional, Tuple
 
 from core.utils import run_command, kill_process, get_wireless_interfaces, get_interface_info
+
+_log_wm = logging.getLogger("wifipwn.wifi_manager")
 
 
 class WiFiManager:
@@ -67,12 +70,16 @@ class WiFiManager:
     def _emit_handshake(self, bssid: str):
         # Global permanent callbacks (registered at startup)
         for cb in self._hs_cbs:
-            try: cb(bssid)
-            except Exception: pass
+            try:
+                cb(bssid)
+            except Exception as e:
+                _log_wm.error("Global HS callback error: %s", e, exc_info=True)
         # Per-capture callback (set each session, cleared on stop)
         if self._capture_cb:
-            try: self._capture_cb(bssid)
-            except Exception: pass
+            try:
+                self._capture_cb(bssid)
+            except Exception as e:
+                _log_wm.error("Per-capture HS callback error: %s", e, exc_info=True)
 
     # ------------------------------------------------------------------
     # Interface management
@@ -360,6 +367,20 @@ class WiFiManager:
             found, msg = check_handshake_in_cap(cap, bssid)
             if found:
                 self._emit_handshake(bssid)
+                # Persist handshake to DB directly (safety net if callback fails)
+                try:
+                    from core.database import db
+                    net = db.get_network_by_bssid(bssid)
+                    if not net:
+                        nid = db.upsert_network(bssid)
+                        net = {"id": nid}
+                    # Avoid duplicate: only insert if this cap file isn't already stored
+                    existing = db.get_handshakes(net["id"])
+                    if not any(h["capture_file"] == cap for h in existing):
+                        db.add_handshake(net["id"], cap)
+                        _log_wm.info("Handshake persisted: net=%s cap=%s", net["id"], cap)
+                except Exception as e:
+                    _log_wm.error("Failed to persist handshake to DB: %s", e, exc_info=True)
                 self._log(f"✓ HANDSHAKE detectado: {bssid} ({cap}) — {msg}")
                 return
             elif checks % 6 == 0:

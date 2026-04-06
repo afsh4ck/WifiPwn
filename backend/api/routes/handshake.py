@@ -1,4 +1,5 @@
 from fastapi import APIRouter, HTTPException
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from typing import Optional
 from datetime import datetime
@@ -133,3 +134,21 @@ async def capture_status():
         "capturing": wifi_manager._capturing,
         "interface": wifi_manager.monitor_interface,
     }
+
+
+@router.get("/download/{handshake_id}")
+async def download_handshake(handshake_id: int):
+    """Download a captured handshake .pcap file."""
+    hs_list = db.get_handshakes()
+    hs = next((h for h in hs_list if h["id"] == handshake_id), None)
+    if not hs:
+        raise HTTPException(status_code=404, detail="Handshake no encontrado")
+    cap_path = Path(hs["capture_file"])
+    if not cap_path.exists():
+        raise HTTPException(status_code=404, detail=f"Archivo no encontrado: {hs['capture_file']}")
+    filename = cap_path.name
+    return FileResponse(
+        path=str(cap_path),
+        media_type="application/octet-stream",
+        filename=filename,
+    )

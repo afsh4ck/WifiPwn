@@ -1,9 +1,10 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { Play, Square, Zap, List } from 'lucide-react'
+import { Play, Square, Zap, List, Download } from 'lucide-react'
 import {
   getInterfaces, startCapture, stopCapture, sendDeauth, getHandshakes,
+  downloadHandshake,
 } from '@/lib/api'
 import { Terminal } from '@/components/ui/Terminal'
 import { StatusBadge } from '@/components/ui/Badge'
@@ -45,7 +46,9 @@ export default function HandshakePage() {
     return subscribe('handshake_detected', (msg) => {
       const d = msg.data as { bssid: string }
       setLines(prev => [...prev, `[✓] HANDSHAKE CAPTURADO: ${d.bssid}`])
+      // Refresh immediately + after a short delay (DB write may lag behind WS broadcast)
       getHandshakes().then(setHandshakes).catch(console.error)
+      setTimeout(() => getHandshakes().then(setHandshakes).catch(console.error), 2000)
     })
   }, [subscribe])
 
@@ -160,8 +163,7 @@ export default function HandshakePage() {
                   <th className="text-left px-3 py-2">Red</th>
                   <th className="text-center px-3 py-2">Craqueado</th>
                   <th className="text-left px-3 py-2">Contraseña</th>
-                  <th className="text-left px-3 py-2">Fecha</th>
-                </tr>
+                  <th className="text-left px-3 py-2">Fecha</th>                  <th className="text-center px-3 py-2">Descargar</th>                </tr>
               </thead>
               <tbody>
                 {handshakes.map(h => (
@@ -175,6 +177,12 @@ export default function HandshakePage() {
                     </td>
                     <td className="px-3 py-2 text-success">{h.password ?? '—'}</td>
                     <td className="px-3 py-2 text-muted">{new Date(h.capture_date).toLocaleDateString('es')}</td>
+                    <td className="px-3 py-2 text-center">
+                      <a href={downloadHandshake(h.id)} download
+                        className="inline-flex items-center gap-1 text-accent hover:text-cyan-300 transition-colors">
+                        <Download className="w-3.5 h-3.5" />
+                      </a>
+                    </td>
                   </tr>
                 ))}
               </tbody>

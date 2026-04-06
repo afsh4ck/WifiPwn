@@ -1,8 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Key, Play, Square } from 'lucide-react'
-import { getHandshakes, startCrack, stopCrack } from '@/lib/api'
+import { Key, Play, Square, Download } from 'lucide-react'
+import { getHandshakes, startCrack, stopCrack, downloadHandshake } from '@/lib/api'
 import { Terminal } from '@/components/ui/Terminal'
 import { StatusBadge } from '@/components/ui/Badge'
 import { useWebSocket } from '@/lib/websocket'
@@ -34,6 +34,7 @@ export default function CrackingPage() {
   useEffect(() => {
     return subscribe('handshake_detected', () => {
       getHandshakes().then(setHandshakes).catch(console.error)
+      setTimeout(() => getHandshakes().then(setHandshakes).catch(console.error), 2000)
     })
   }, [subscribe])
 
@@ -127,19 +128,25 @@ export default function CrackingPage() {
           ) : (
             <div className="space-y-1 max-h-[280px] overflow-y-auto">
               {handshakes.map(h => (
-                <button
-                  key={h.id}
-                  onClick={() => handleSelectHandshake(h)}
-                  className={`w-full text-left px-3 py-2 rounded-lg text-xs font-mono transition-colors border ${
+                <div key={h.id} className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-mono transition-colors border ${
                     captureFile === h.capture_file
                       ? 'border-accent/40 bg-accent/10 text-accent'
                       : 'border-transparent hover:bg-surface text-muted hover:text-text'
-                  }`}
-                >
-                  <div className="text-text">{h.essid ?? h.bssid}</div>
-                  <div className="text-muted/60 truncate">{h.capture_file}</div>
-                  {h.cracked && <div className="text-success mt-0.5">✓ {h.password}</div>}
-                </button>
+                  }`}>
+                  <button
+                    onClick={() => handleSelectHandshake(h)}
+                    className="flex-1 text-left min-w-0"
+                  >
+                    <div className="text-text">{h.essid ?? h.bssid}</div>
+                    <div className="text-muted/60 truncate">{h.capture_file}</div>
+                    {h.cracked && <div className="text-success mt-0.5">\u2713 {h.password}</div>}
+                  </button>
+                  <a href={downloadHandshake(h.id)} download
+                    className="shrink-0 p-1 text-accent hover:text-cyan-300 transition-colors"
+                    title="Descargar .pcap">
+                    <Download className="w-3.5 h-3.5" />
+                  </a>
+                </div>
               ))}
             </div>
           )}

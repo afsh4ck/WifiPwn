@@ -74,6 +74,8 @@ export const checkHandshake = (file: string, bssid: string) =>
   post('/handshake/check', { file, bssid })
 export const getHandshakes  = () => get<Handshake[]>('/handshake/list')
 export const getCaptureStatus = () => get<CaptureStatus>('/handshake/status')
+export const downloadHandshake = (id: number) =>
+  `${BASE}/handshake/download/${id}`
 
 // ─── Cracking ────────────────────────────────────────────────────────
 export const startCrack  = (capture: string, wordlist: string, bssid?: string) =>
