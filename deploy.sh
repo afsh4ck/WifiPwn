@@ -1,23 +1,48 @@
 #!/bin/bash
 
 # WifiPwn Deploy Script
-# Configura IP aleatoria en eth0 e inicia la aplicación
 
 set -e
 
-echo ""
-echo ' _       __ ____ ______ ____ ____  _       __ _   __ '
-echo '| |     / //  _// ____//  _// __ \| |     / // | / / '
-echo '| | /| / / / / / /_    / / / /_/ /| | /| / //  |/ /  '
-echo '| |/ |/ /_/ / / __/  _/ / / ____/ | |/ |/ // /|  /   '
-echo '|__/|__//___//_/    /___//_/      |__/|__//_/ |_/    '
-echo '                                                     '
-echo '                    by:afsh4ck'
-echo ""
-echo "========================================="
-echo "      WifiPwn - Deployment Script"
-echo "========================================="
-echo ""
+GREEN='\033[0;32m'; YELLOW='\033[1;33m'; BLUE='\033[0;34m'; RED='\033[0;31m'
+CYAN='\033[0;36m'; BOLD='\033[1m'; DIM='\033[2m'; NC='\033[0m'
+
+ok()   { echo -e "  ${GREEN}✔${NC}  $*"; }
+info() { echo -e "  ${BLUE}◆${NC}  $*"; }
+warn() { echo -e "  ${YELLOW}⚠${NC}  $*"; }
+fail() { echo -e "  ${RED}✖${NC}  $*"; }
+step() { printf "  ${BLUE}◆${NC}  %-38s" "$* ..."; }
+done_ok()   { echo -e " ${GREEN}OK${NC}"; }
+done_fail() { echo -e " ${RED}FAIL${NC}"; }
+
+banner() {
+    echo ""
+    echo -e "${CYAN}${BOLD}"
+    echo ' _       __ ____ ______ ____ ____  _       __ _   __ '
+    echo '| |     / //  _// ____//  _// __ \| |     / // | / / '
+    echo '| | /| / / / / / /_    / / / /_/ /| | /| / //  |/ /  '
+    echo '| |/ |/ /_/ / / __/  _/ / / ____/ | |/ |/ // /|  /   '
+    echo '|__/|__//___//_/    /___//_/      |__/|__//_/ |_/    '
+    echo -e "${NC}${DIM}                       by: afsh4ck${NC}"
+    echo ""
+}
+
+panel() {
+    local title="$1"; shift
+    local width=46
+    local top="${BOLD}┌$(printf '─%.0s' $(seq 1 $width))┐${NC}"
+    local bot="${BOLD}└$(printf '─%.0s' $(seq 1 $width))┘${NC}"
+    echo -e "$top"
+    printf "${BOLD}│${NC}  ${CYAN}${BOLD}%-${width}s${NC}${BOLD}│${NC}\n" "$title"
+    echo -e "${BOLD}│$(printf ' %.0s' $(seq 1 $width))│${NC}"
+    for line in "$@"; do
+        printf "${BOLD}│${NC}  %-${width}s${BOLD}│${NC}\n" "$line"
+    done
+    echo -e "$bot"
+    echo ""
+}
+
+banner
 
 # Función para generar IP aleatoria en rango privado
 generate_random_ip() {
@@ -52,50 +77,50 @@ _SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CONTAINER_NAME="wifipwn"
 IMAGE_NAME="wifipwn:latest"
 
-GREEN='\033[0;32m'; YELLOW='\033[1;33m'; BLUE='\033[0;34m'; RED='\033[0;31m'; NC='\033[0m'
-
 if [ "${1:-}" = "docker" ] || [ "${1:-}" = "--docker" ]; then
     shift
     CMD="${1:-run}"
     case "$CMD" in
         build)
-            echo -e "${BLUE}[*] Construyendo imagen Docker...${NC}"
-            docker build -t "$IMAGE_NAME" "$_SCRIPT_DIR"
-            echo -e "${GREEN}[+] Imagen lista${NC}"
+            step "Construyendo imagen Docker"
+            docker build -t "$IMAGE_NAME" "$_SCRIPT_DIR" >/dev/null 2>&1 && done_ok || { done_fail; exit 1; }
             ;;
         stop)
-            echo -e "${BLUE}[*] Deteniendo WifiPwn...${NC}"
-            docker stop "$CONTAINER_NAME" 2>/dev/null && echo -e "${GREEN}[+] Detenido${NC}" || echo -e "${YELLOW}No estaba en ejecución${NC}"
+            step "Deteniendo WifiPwn"
+            docker stop "$CONTAINER_NAME" >/dev/null 2>&1 && done_ok || { echo -e " ${YELLOW}(no estaba corriendo)${NC}"; }
             ;;
         logs)
             docker logs -f "$CONTAINER_NAME"
             ;;
         status)
             if docker ps --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
-                echo -e "${GREEN}[+] WifiPwn está EJECUTANDO${NC}"
-                docker ps --filter "name=$CONTAINER_NAME" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
-                echo -e "\n    Interfaz web: http://localhost:1234\n    API docs:     http://localhost:8000/docs"
+                ok "WifiPwn está ${GREEN}${BOLD}ACTIVO${NC}"
+                docker ps --filter "name=$CONTAINER_NAME" --format "    {{.Status}}  {{.Ports}}"
+                echo ""
+                echo -e "    ${BLUE}▸${NC} Web: http://localhost:1234"
+                echo -e "    ${BLUE}▸${NC} API: http://localhost:8000/docs"
             else
-                echo -e "${RED}[!] WifiPwn está DETENIDO${NC}"
+                fail "WifiPwn está ${RED}DETENIDO${NC}"
             fi
             ;;
         shell)
             docker exec -it "$CONTAINER_NAME" /bin/bash
             ;;
         clean)
-            echo -e "${YELLOW}[!] Eliminando contenedor e imagen...${NC}"
+            step "Eliminando contenedor e imagen"
             docker stop "$CONTAINER_NAME" 2>/dev/null || true
             docker rm "$CONTAINER_NAME" 2>/dev/null || true
             docker rmi "$IMAGE_NAME" 2>/dev/null || true
-            echo -e "${GREEN}[+] Limpieza completada${NC}"
+            done_ok
             ;;
         run|*)
             if ! docker images --format '{{.Repository}}:{{.Tag}}' | grep -q "^${IMAGE_NAME}$"; then
-                echo -e "${YELLOW}[!] Imagen no encontrada, construyendo...${NC}"
-                docker build -t "$IMAGE_NAME" "$_SCRIPT_DIR"
+                step "Construyendo imagen Docker"
+                docker build -t "$IMAGE_NAME" "$_SCRIPT_DIR" >/dev/null 2>&1 && done_ok || { done_fail; exit 1; }
             fi
             docker rm "$CONTAINER_NAME" 2>/dev/null || true
             mkdir -p "$_SCRIPT_DIR/data" "$_SCRIPT_DIR/captures" "$_SCRIPT_DIR/reports" "$_SCRIPT_DIR/logs"
+            step "Iniciando contenedor"
             docker run -d \
                 --name "$CONTAINER_NAME" \
                 --privileged \
@@ -108,19 +133,15 @@ if [ "${1:-}" = "docker" ] || [ "${1:-}" = "--docker" ]; then
                 -v "$_SCRIPT_DIR/reports:/app/reports" \
                 -v "$_SCRIPT_DIR/logs:/app/logs" \
                 --restart unless-stopped \
-                "$IMAGE_NAME"
+                "$IMAGE_NAME" >/dev/null 2>&1 && done_ok || { done_fail; exit 1; }
             sleep 3
             echo ""
-            echo -e "${GREEN}=========================================${NC}"
-            echo -e "${GREEN}  WifiPwn iniciado con Docker${NC}"
-            echo -e "${GREEN}  Interfaz web: http://localhost:1234${NC}"
-            echo -e "${GREEN}  API docs:     http://localhost:8000/docs${NC}"
-            echo -e "${GREEN}=========================================${NC}"
-            echo ""
-            echo "  deploy.sh docker logs   → ver logs"
-            echo "  deploy.sh docker stop   → detener"
-            echo "  deploy.sh docker status → estado"
-            echo ""
+            panel "WifiPwn — Docker" \
+                "▸  Web: http://localhost:1234" \
+                "▸  API: http://localhost:8000/docs" \
+                "" \
+                "logs   → deploy.sh docker logs" \
+                "stop   → deploy.sh docker stop"
             ;;
     esac
     exit 0
@@ -129,49 +150,30 @@ fi
 # ── Modo nativo (host) ────────────────────────────────────────────────
 # Verificar si estamos en Docker
 if [ -f /.dockerenv ]; then
-    echo "[*] Ejecutando dentro de contenedor Docker"
     IN_DOCKER=true
 else
-    echo "[*] Ejecutando en sistema host"
     IN_DOCKER=false
-fi
-
-# Configurar interfaz eth0 con IP aleatoria
-echo "[*] Configurando interfaz de red..."
-
-if [ "$IN_DOCKER" = true ]; then
-    # En Docker, configurar eth0 si existe
-    if ip link show eth0 &>/dev/null; then
-        # Generar IP aleatoria
-        NEW_IP=$(generate_random_ip)
-        NETMASK=$(generate_random_netmask)
-        
-        echo "[*] Asignando IP aleatoria: $NEW_IP/$NETMASK"
-        
-        # Configurar interfaz
-        ip addr flush dev eth0 2>/dev/null || true
-        ip addr add ${NEW_IP}/24 dev eth0 2>/dev/null || true
-        ip link set eth0 up 2>/dev/null || true
-        
-        echo "[+] IP configurada: $NEW_IP"
-    else
-        echo "[!] Interfaz eth0 no encontrada"
-    fi
-else
-    # En host, solo mostrar información
-    echo "[*] Interfaz eth0:"
-    ip addr show eth0 2>/dev/null || echo "    No disponible"
 fi
 
 # Verificar permisos de root
 if [ "$EUID" -ne 0 ]; then 
-    echo "[!] Este script debe ejecutarse como root (sudo)"
+    fail "Este script debe ejecutarse como root: ${BOLD}sudo bash deploy.sh${NC}"
     exit 1
 fi
 
-# Crear directorios de datos si no existen
-echo "[*] Creando directorios de datos..."
+# Configurar interfaz eth0 con IP aleatoria
+if [ "$IN_DOCKER" = true ]; then
+    if ip link show eth0 &>/dev/null; then
+        NEW_IP=$(generate_random_ip)
+        step "Configurando eth0"
+        ip addr flush dev eth0 2>/dev/null || true
+        ip addr add ${NEW_IP}/24 dev eth0 2>/dev/null || true
+        ip link set eth0 up 2>/dev/null || true
+        done_ok
+    fi
+fi
 
+# Crear directorios de datos si no existen
 if [ "$IN_DOCKER" = true ]; then
     DATA_DIR="/app/data"
     CAPTURES_DIR="/app/captures"
@@ -187,16 +189,12 @@ else
     TEMPLATES_DIR="$SCRIPT_DIR/templates"
 fi
 
-mkdir -p "$DATA_DIR"
-mkdir -p "$CAPTURES_DIR"
-mkdir -p "$REPORTS_DIR"
-mkdir -p "$LOGS_DIR"
-mkdir -p "$TEMPLATES_DIR"
+mkdir -p "$DATA_DIR" "$CAPTURES_DIR" "$REPORTS_DIR" "$LOGS_DIR" "$TEMPLATES_DIR"
 
 # Inicializar base de datos si no existe
 DB_PATH="$DATA_DIR/wifipwn.db"
 if [ ! -f "$DB_PATH" ]; then
-    echo "[*] Inicializando base de datos en $DB_PATH..."
+    step "Inicializando base de datos"
     sqlite3 "$DB_PATH" <<EOF
 CREATE TABLE IF NOT EXISTS networks (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -275,30 +273,26 @@ CREATE INDEX IF NOT EXISTS idx_credentials_date ON credentials(capture_date);
 
 INSERT INTO audit_logs (action, details) VALUES ('Database Initialized', 'Created all tables');
 EOF
-    echo "[+] Base de datos inicializada"
-else
-    echo "[*] Base de datos existente encontrada"
+    done_ok
 fi
 
 # Verificar herramientas necesarias
-echo "[*] Verificando herramientas..."
-TOOLS="aircrack-ng airodump-ng aireplay-ng airmon-ng hostapd dnsmasq iw"
-for tool in $TOOLS; do
-    if command -v $tool &> /dev/null; then
-        echo "    [+] $tool: OK"
-    else
-        echo "    [!] $tool: NO ENCONTRADO"
-    fi
+step "Verificando herramientas del sistema"
+MISSING=""
+for tool in aircrack-ng airodump-ng aireplay-ng airmon-ng hostapd dnsmasq iw; do
+    command -v $tool &>/dev/null || MISSING="$MISSING $tool"
 done
+if [ -z "$MISSING" ]; then
+    done_ok
+else
+    done_fail
+    warn "Herramientas no encontradas:${YELLOW}$MISSING${NC}"
+fi
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 
 # ── WEB MODE: FastAPI backend + Next.js frontend ──────────────────────
-echo ""
-echo "========================================="
-echo "   Iniciando WifiPwn Web (API + Next.js)"
-echo "========================================="
 echo ""
 
 BACKEND_DIR="$SCRIPT_DIR/backend"
@@ -306,91 +300,83 @@ FRONTEND_DIR="$SCRIPT_DIR/frontend"
 
 # Check backend dir
 if [ ! -d "$BACKEND_DIR" ]; then
-    echo "[!] No se encuentra $BACKEND_DIR"
+    fail "No se encuentra $BACKEND_DIR"
     exit 1
 fi
 
 # Install Python backend deps
-echo "[*] Instalando dependencias Python del backend..."
+step "Instalando dependencias Python"
 pip3 install -q -r "$BACKEND_DIR/requirements.txt" 2>/dev/null || \
     pip3 install -q --break-system-packages -r "$BACKEND_DIR/requirements.txt" 2>/dev/null || \
-    python3 -m pip install -q -r "$BACKEND_DIR/requirements.txt" --break-system-packages
+    python3 -m pip install -q -r "$BACKEND_DIR/requirements.txt" --break-system-packages 2>/dev/null && done_ok || done_fail
 
-# Install Node.js frontend deps
+# Install Node.js frontend deps + build
 if [ -d "$FRONTEND_DIR" ]; then
-    echo "[*] Instalando dependencias Node.js del frontend..."
-    cd "$FRONTEND_DIR"
     if ! command -v npm &>/dev/null; then
-        echo "[!] npm no encontrado. Instala Node.js >= 18"
-        echo "    curl -fsSL https://deb.nodesource.com/setup_20.x | bash -"
-        echo "    apt-get install -y nodejs"
+        fail "npm no encontrado — instala Node.js >= 18:"
+        info "curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && apt-get install -y nodejs"
         exit 1
     fi
-    npm install --silent
-    echo "[*] Construyendo frontend Next.js..."
-    npm run build
+    step "Instalando dependencias Node.js"
+    cd "$FRONTEND_DIR" && npm install --silent 2>/dev/null && done_ok || done_fail
+    step "Construyendo frontend Next.js"
+    npm run build --silent 2>/dev/null && done_ok || done_fail
     cd "$SCRIPT_DIR"
 fi
 
 # Cleanup on exit
 cleanup() {
     echo ""
-    echo "[*] Deteniendo servicios..."
+    info "Deteniendo servicios..."
     kill "$BACKEND_PID" 2>/dev/null || true
     kill "$FRONTEND_PID" 2>/dev/null || true
     wait
-    echo "[+] WifiPwn detenido"
+    ok "WifiPwn detenido"
 }
 trap cleanup EXIT INT TERM
 
 # Start FastAPI backend
-echo "[*] Iniciando API backend (puerto 8000)..."
+step "Iniciando API backend"
 cd "$BACKEND_DIR"
 python3 -m uvicorn main:app --host 0.0.0.0 --port 8000 --log-level warning &
 BACKEND_PID=$!
 
 # Wait for backend with curl health-check (up to 15s)
-echo -n "[*] Esperando backend"
+printf "  ${BLUE}◆${NC}  %-38s" "Esperando backend ..."
 for i in $(seq 1 15); do
     sleep 1
     if ! kill -0 "$BACKEND_PID" 2>/dev/null; then
-        echo ""
-        echo "[!] Error: el backend se ha cerrado inesperadamente"
-        echo "[!] Ejecuta manualmente para ver el error:"
-        echo "    cd '$BACKEND_DIR' && python3 -m uvicorn main:app --host 0.0.0.0 --port 8000"
+        done_fail
+        fail "Backend cerrado inesperadamente. Diagnóstico:"
+        echo -e "    ${DIM}cd '$BACKEND_DIR' && python3 -m uvicorn main:app --port 8000${NC}"
         exit 1
     fi
     if curl -sf http://localhost:8000/api/health >/dev/null 2>&1; then
-        echo " OK"
+        done_ok
         break
     fi
-    echo -n "."
+    printf "."
 done
 if ! curl -sf http://localhost:8000/api/health >/dev/null 2>&1; then
     echo ""
-    echo "[!] Backend no responde tras 15s. Comprueba que el puerto 8000 no esté en uso:"
-    echo "    ss -tlnp | grep 8000"
+    warn "Backend no responde. Comprueba: ${DIM}ss -tlnp | grep 8000${NC}"
 fi
-echo "[+] Backend API listo en http://localhost:8000"
 
 # Start Next.js frontend
 if [ -d "$FRONTEND_DIR" ]; then
-    echo "[*] Iniciando frontend Next.js (puerto 1234)..."
+    step "Iniciando frontend Next.js"
     cd "$FRONTEND_DIR"
-    npm start &
+    npm start &>/dev/null &
     FRONTEND_PID=$!
     sleep 2
-    echo "[+] Frontend listo en http://localhost:1234"
+    done_ok
 fi
 
 echo ""
-echo "========================================="
-echo "  WifiPwn Web Interface"
-echo "  => http://localhost:1234"
-echo "  => API: http://localhost:8000/docs"
-echo "========================================="
-echo ""
-echo "Presiona Ctrl+C para detener todos los servicios"
-echo ""
+panel "WifiPwn — Listo" \
+    "▸  Web: http://localhost:1234" \
+    "▸  API: http://localhost:8000/docs" \
+    "" \
+    "Ctrl+C para detener"
 
 wait
