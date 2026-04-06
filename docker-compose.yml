@@ -1,0 +1,79 @@
+version: '3.8'
+
+services:
+  wifipwn:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: wifipwn:latest
+    container_name: wifipwn
+    hostname: wifipwn
+    
+    # Privilegios necesarios para herramientas WiFi
+    privileged: true
+    
+    # Capacidades adicionales
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+      - SYS_ADMIN
+      - SYS_PTRACE
+    
+    # Modo de red host para acceso directo a interfaces
+    network_mode: host
+    
+    # Variables de entorno
+    environment:
+      - DISPLAY=${DISPLAY:-:0}
+      - QT_X11_NO_MITSHM=1
+      - QT_QPA_PLATFORM=xcb
+      - DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus
+    
+    # Volumenes
+    volumes:
+      # X11 socket para GUI
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      # Directorio de datos persistente
+      - ./data:/app/data
+      # Directorio de capturas
+      - ./captures:/app/captures
+      # Directorio de reportes
+      - ./reports:/app/reports
+      # Directorio de logs
+      - ./logs:/app/logs
+      # Configuracion
+      - ./config:/app/config
+      # Plantillas
+      - ./templates:/app/templates
+    
+    # Dispositivos (para antenas WiFi USB)
+    devices:
+      - /dev/net/tun
+    
+    # Reinicio automatico
+    restart: unless-stopped
+    
+    # Comando por defecto
+    command: ["/app/deploy.sh"]
+    
+    # Healthcheck
+    healthcheck:
+      test: ["CMD", "test", "-f", "/app/data/wifipwn.db"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    
+    # Logging
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+# Volúmenes nombrados
+volumes:
+  wifipwn_data:
+    driver: local
+  wifipwn_captures:
+    driver: local
